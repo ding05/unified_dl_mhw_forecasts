@@ -1,0 +1,20 @@
+%%bash
+
+# cdo commands for processing data
+
+# FAQ: https://code.mpimet.mpg.de/projects/cdo/wiki/FAQ#How-can-I-remap-my-data-to-a-different-grid-of-another-data-file
+
+# Check long information.
+cdo info sst.mon.mean.nc
+
+# Check short information.
+cdo sinfo sst.mon.mean.nc
+cdo sinfo sst.month.anom.1981_2023.quarter.nc
+
+# Check variable names.
+cdo showname sst.mon.mean.nc
+
+# Resize the grid to 1x1 degree.
+cdo remapbil,r360x180 sst.mon.mean.nc sst.mon.mean.quarter.nc
+cdo remapbil,r360x180 sst.month.anom.1981_2023.nc sst.month.anom.1981_2023.quarter.nc
+cdo remapbil,r180x90 sst.month.anom.1981_2023.nc sst.month.anom.1981_2023.eighth.nc
