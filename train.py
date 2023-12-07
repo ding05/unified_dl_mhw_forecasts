@@ -134,6 +134,9 @@ if lead_time > 1:
     counter = 0
 
     for epoch in range(num_epochs):
+        # Train the model.
+        model.train()
+        
         # Iterate over the training data.
         for data in train_graph_list:
             optimizer.zero_grad()
@@ -144,7 +147,10 @@ if lead_time > 1:
             loss.backward()
             optimizer.step()
         loss_epochs.append(loss.item())
-    
+        
+        # Evaluate the model.
+        model.eval()
+        
         # Compute the MSE, precision, recall, and critical success index (CSI) on the validation set.
         with torch.no_grad():
             val_mse_nodes = 0
