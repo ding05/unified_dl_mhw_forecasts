@@ -21,16 +21,16 @@ out_path = 'out/'
 
 
 node_feat_filename = 'era5_node_feats_ssta_1980_2010.npy'
-adj_filename = 'era5_adj_mat_0.9.npy'
+adj_filename = 'era5_adj_mat_0.8.npy'
 
 window_size = 12
 lead_time = 3
-learning_rate = 0.001 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for SSTs
+learning_rate = 0.01 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for SSTs
 #learning_rate = 0.01 # For the GraphSAGE-LSTM
 weight_decay = 0.0001 # 0.0001 for RMSProp
 momentum = 0.9
 l1_ratio = 1
-num_epochs = 400 #1000, 400, 200
+num_epochs = 1 #1000, 400, 200
 # Early stopping, if the validation MSE has not improved for "patience" epochs, stop training.
 patience = num_epochs #100, 40, 20
 min_val_mse = np.inf
@@ -74,8 +74,10 @@ if lead_time > 1:
         y = []
         for node_i in range(node_feat_grid.shape[0]):
             x.append(node_feat_grid_normalized[node_i][time_i : time_i + window_size])
-            y.append(node_feat_grid_normalized[node_i][time_i + window_size : time_i + window_size + lead_time - 1])
-        x = torch.tensor(x)
+            x.append(0) # Initialize the first feature as zero, later replaced by the predicted feature at the target time.
+            y.append(node_feat_grid_normalized[node_i][time_i + window_size + lead_time - 1])
+        x = torch.tensor(np.array(x))
+        y = torch.tensor(np.array(y))
         # Generate incomplete graphs with the adjacency matrix.
         edge_index = torch.tensor(adj_mat, dtype=torch.long)
         data = Data(x=x, y=y, edge_index=edge_index, num_nodes=node_feat_grid.shape[0], num_edges=adj_mat.shape[1], has_isolated_nodes=True, has_self_loops=False, is_undirected=True)
@@ -104,8 +106,12 @@ if lead_time > 1:
     # Select one threshold array.
     threshold_tensor = torch.tensor(node_feats_normalized_90).float()
     
-    # Define the model.
-    model, model_class = MultiGraphSage_Dropout(in_channels=graph_list[0].x[0].shape[0], hid_channels=15, out_channels=graph_list[0].y[0].shape[0], num_graphs=len(train_graph_list), aggr='mean'), 'SAGE'
+    # Define the models.
+    # Several interpolators and one forecaster
+    interpolators = {}
+    for i in range(1, lead_time):
+        interpolators[i], model_class = MultiGraphSage_Dropout(in_channels=graph_list[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list), aggr='mean'), f'SAGE_ITP_{i}'
+    forecaster, model_class = MultiGraphSage(in_channels=graph_list[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list), aggr='mean'), 'SAGE_FCS'
     
     # Define the loss function.
     criterion = nn.MSELoss()
@@ -135,43 +141,97 @@ if lead_time > 1:
 
     for epoch in range(num_epochs):
         # Train the model.
-        model.train()
-        
-        # Iterate over the training data.
-        for data in train_graph_list:
-            optimizer.zero_grad()
-            output = model([data])
-            loss = criterion(output.squeeze(), torch.tensor(data.y).squeeze())
-            #loss = cm_weighted_mse(output.squeeze(), torch.tensor(data.y).squeeze(), threshold=threshold_tensor)
-            #loss = cm_weighted_mse(output.squeeze(), torch.tensor(data.y).squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
-            loss.backward()
-            optimizer.step()
-        loss_epochs.append(loss.item())
-        
-        # Evaluate the model.
-        model.eval()
-        
-        # Compute the MSE, precision, recall, and critical success index (CSI) on the validation set.
-        with torch.no_grad():
-            val_mse_nodes = 0
-            val_precision_nodes = 0
-            val_recall_nodes = 0
-            val_csi_nodes = 0
-            pred_node_feat_list = []
+        #model.train()
+        # Iterate over the lead time to train the interpolators and train/refine the forecaster.
+        for i in range(1, lead_time):
             
-            for data in val_graph_list:
-                output = model([data])
-                val_mse = criterion_test(output.squeeze(), torch.tensor(data.y).squeeze())
-                print('Val predictions:', output.squeeze().tolist()[::300])
-                print('Val observations:', torch.tensor(data.y).squeeze().tolist()[::300])
-                val_mse_nodes += val_mse
+            # Iterate over the training data.
+            # Train/refine the forecaster.
+            for data in train_graph_list:
+                optimizer.zero_grad()
+                output = forecaster([data])
+                loss = criterion(output.squeeze(), torch.tensor(data.y).squeeze())
+                #loss = cm_weighted_mse(output.squeeze(), torch.tensor(data.y).squeeze(), threshold=threshold_tensor)
+                #loss = cm_weighted_mse(output.squeeze(), torch.tensor(data.y).squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+                loss.backward()
+                optimizer.step()
+            loss_epochs.append(loss.item())
+            
+            # Get the forecasted output and update the graphs.
+            pred_node_feat_list.append(output.squeeze())
+            for graph in train_graph_list:
+                x = graph.x
+                for node_i in range(x.shape[0]):
+                    x[node_i, -1] = pred_node_feat_list[node_i]
+                graph.x = x
+            
+            # Define the graph set for training an interpolator.
+            graph_itp_list = []
+            for time_i in range(num_time):
+                x = []
+                y = []
+                for node_i in range(node_feat_grid.shape[0]):
+                    x.append(node_feat_grid_normalized[node_i][time_i : time_i + window_size])
+                    x.append(0) # Initialize the first feature as zero, later replaced by the predicted feature at the target time.
+                    y.append(node_feat_grid_normalized[node_i][time_i + window_size + i - 1])
+                x = torch.tensor(np.array(x))
+                y = torch.tensor(np.array(y))
+                # Generate incomplete graphs with the adjacency matrix.
+                edge_index = torch.tensor(adj_mat, dtype=torch.long)
+                data = Data(x=x, y=y, edge_index=edge_index, num_nodes=node_feat_grid.shape[0], num_edges=adj_mat.shape[1], has_isolated_nodes=True, has_self_loops=False, is_undirected=True)
+                graph_itp_list.append(data)
                 
-                # The model output graph by graph, but we are interested in time series at node by node.
-                # Transform the shapes.
-                pred_node_feat_list.append(output.squeeze())  
+            train_graph_itp_list = graph_itp_list[:840]
+            
+            # Update the graph with the predicted values at the target time.
+            for graph in train_graph_itp_list:
+                x = graph.x
+                for node_i in range(x.shape[0]):
+                    x[node_i, -1] = pred_node_feat_list[node_i]
+                graph.x = x
+                    
+            # Train an interpolator.
+            for data in train_graph_itp_list:
+                optimizer.zero_grad()
+                output = interpolators[i]([data])
+                loss = criterion(output.squeeze(), torch.tensor(data.y).squeeze())
+                #loss = cm_weighted_mse(output.squeeze(), torch.tensor(data.y).squeeze(), threshold=threshold_tensor)
+                #loss = cm_weighted_mse(output.squeeze(), torch.tensor(data.y).squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+                loss.backward()
+                optimizer.step()
+            loss_epochs.append(loss.item())  
+            
+            # Get the interpolated output and update the graphs.
+            pred_node_feat_list.append(output.squeeze())
+            for graph in train_graph_list:
+                x = graph.x
+                for node_i in range(x.shape[0]):
+                    x[node_i, i - 1] = pred_node_feat_list[node_i]
+                graph.x = x
+            
+            """
+            # Evaluate the model.
+            model.eval()
+            
+            # Compute the MSE, precision, recall, and critical success index (CSI) on the validation set.
+            with torch.no_grad():
+                val_mse_nodes = 0
+                pred_node_feat_list = []
+                
+                for data in val_graph_list:
+                    output = model([data])
+                    val_mse = criterion_test(output.squeeze(), torch.tensor(data.y).squeeze())
+                    #print('Val predictions:', output.squeeze().tolist()[::300])
+                    #print('Val observations:', torch.tensor(data.y).squeeze().tolist()[::300])
+                    val_mse_nodes += val_mse
+                    
+                    # The model output graph by graph, but we are interested in time series at node by node.
+                    # Transform the shapes.
+                    pred_node_feat_list.append(output.squeeze())
+            """
 
 # If lead time is 1, there is no need to use diffusion.
-if lead_time == 1:
+elif lead_time == 1:
 
     # Generate PyG graphs from NumPy arrays.
     graph_list = []
@@ -181,7 +241,8 @@ if lead_time == 1:
         for node_i in range(node_feat_grid.shape[0]):
             x.append(node_feat_grid_normalized[node_i][time_i : time_i + window_size])
             y.append(node_feat_grid_normalized[node_i][time_i + window_size + lead_time - 1])
-        x = torch.tensor(x)
+        x = torch.tensor(np.array(x))
+        y = torch.tensor(np.array(y))
         # Generate incomplete graphs with the adjacency matrix.
         edge_index = torch.tensor(adj_mat, dtype=torch.long)
         data = Data(x=x, y=y, edge_index=edge_index, num_nodes=node_feat_grid.shape[0], num_edges=adj_mat.shape[1], has_isolated_nodes=True, has_self_loops=False, is_undirected=True)
