@@ -20,11 +20,11 @@ models_path = 'configs/'
 out_path = 'out/'
 
 
-node_feat_filename = 'era5_node_feats_ssta_1980_2010.npy'
-adj_filename = 'era5_adj_mat_0.8.npy'
+node_feat_filename = 'node_feats_ssta_1980_2010.npy'
+adj_filename = 'adj_mat_0.8.npy'
 
 window_size = 12
-lead_time = 3
+lead_time = 1
 learning_rate = 0.01 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for SSTs
 #learning_rate = 0.01 # For the GraphSAGE-LSTM
 weight_decay = 0.0001 # 0.0001 for RMSProp
@@ -64,6 +64,8 @@ num_time = node_feat_grid.shape[1] - window_size - lead_time + 1
 # Set the number of decimals in torch tensors printed.
 torch.set_printoptions(precision=8)
 
+##### ##### ##### ##### #####
+##### ##### ##### ##### #####
 # If lead time is greater than 1, use diffusion to interpolate the next time steps.
 if lead_time > 1:
     
@@ -150,9 +152,9 @@ if lead_time > 1:
             for data in train_graph_list:
                 optimizer.zero_grad()
                 output = forecaster([data])
-                loss = criterion(output.squeeze(), torch.tensor(data.y).squeeze())
-                #loss = cm_weighted_mse(output.squeeze(), torch.tensor(data.y).squeeze(), threshold=threshold_tensor)
-                #loss = cm_weighted_mse(output.squeeze(), torch.tensor(data.y).squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+                loss = criterion(output.squeeze(), data.y.squeeze())
+                #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
+                #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss.backward()
                 optimizer.step()
             loss_epochs.append(loss.item())
@@ -194,9 +196,9 @@ if lead_time > 1:
             for data in train_graph_itp_list:
                 optimizer.zero_grad()
                 output = interpolators[i]([data])
-                loss = criterion(output.squeeze(), torch.tensor(data.y).squeeze())
-                #loss = cm_weighted_mse(output.squeeze(), torch.tensor(data.y).squeeze(), threshold=threshold_tensor)
-                #loss = cm_weighted_mse(output.squeeze(), torch.tensor(data.y).squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+                loss = criterion(output.squeeze(), data.y.squeeze())
+                #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
+                #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss.backward()
                 optimizer.step()
             loss_epochs.append(loss.item())  
@@ -220,9 +222,9 @@ if lead_time > 1:
                 
                 for data in val_graph_list:
                     output = model([data])
-                    val_mse = criterion_test(output.squeeze(), torch.tensor(data.y).squeeze())
+                    val_mse = criterion_test(output.squeeze(), data.y.squeeze())
                     #print('Val predictions:', output.squeeze().tolist()[::300])
-                    #print('Val observations:', torch.tensor(data.y).squeeze().tolist()[::300])
+                    #print('Val observations:', data.y.squeeze().tolist()[::300])
                     val_mse_nodes += val_mse
                     
                     # The model output graph by graph, but we are interested in time series at node by node.
@@ -230,6 +232,8 @@ if lead_time > 1:
                     pred_node_feat_list.append(output.squeeze())
             """
 
+##### ##### ##### ##### #####
+##### ##### ##### ##### #####
 # If lead time is 1, there is no need to use diffusion.
 elif lead_time == 1:
 
@@ -275,7 +279,7 @@ elif lead_time == 1:
     model, model_class = MultiGraphSage(in_channels=graph_list[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list), aggr='mean'), 'SAGE'
     
     # Define the loss function.
-    #criterion = nn.MSELoss()
+    criterion = nn.MSELoss()
     #criterion = BMCLoss(0.1)
     criterion_test = nn.MSELoss()
     
@@ -305,9 +309,9 @@ elif lead_time == 1:
         for data in train_graph_list:
             optimizer.zero_grad()
             output = model([data])
-            #loss = criterion(output.squeeze(), torch.tensor(data.y).squeeze())
-            #loss = cm_weighted_mse(output.squeeze(), torch.tensor(data.y).squeeze(), threshold=threshold_tensor)
-            loss = cm_weighted_mse(output.squeeze(), torch.tensor(data.y).squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+            loss = criterion(output.squeeze(), data.y.squeeze())
+            #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
+            #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
             loss.backward()
             optimizer.step()
         loss_epochs.append(loss.item())
@@ -322,9 +326,9 @@ elif lead_time == 1:
             
             for data in val_graph_list:
                 output = model([data])
-                val_mse = criterion_test(output.squeeze(), torch.tensor(data.y).squeeze())
+                val_mse = criterion_test(output.squeeze(), data.y.squeeze())
                 print('Val predictions:', [round(i, 4) for i in output.squeeze().tolist()[::300]])
-                print('Val observations:', [round(i, 4) for i in torch.tensor(data.y).squeeze().tolist()[::300]])
+                print('Val observations:', [round(i, 4) for i in data.y.squeeze().tolist()[::300]])
                 val_mse_nodes += val_mse
                 
                 # The model output graph by graph, but we are interested in time series at node by node.
@@ -394,9 +398,9 @@ elif lead_time == 1:
         test_mse_nodes = 0
         for data in test_graph_list:
             output = model([data])
-            test_mse = criterion_test(output.squeeze(), torch.tensor(data.y).squeeze())
+            test_mse = criterion_test(output.squeeze(), data.y.squeeze())
             print('Test predictions:', [round(i, 4) for i in output.squeeze().tolist()[::300]])
-            print('Test observations:', [round(i, 4) for i in torch.tensor(data.y).squeeze().tolist()[::300]])
+            print('Test observations:', [round(i, 4) for i in data.y.squeeze().tolist()[::300]])
             test_mse_nodes += test_mse
         test_mse_nodes /= len(test_graph_list)
         print('Test MSE: {:.4f}'.format(test_mse_nodes))
@@ -430,6 +434,8 @@ elif lead_time == 1:
     print('----------')
     print()
 
+##### ##### ##### ##### #####
+##### ##### ##### ##### #####
 # Otherwise, print an error message.
 else:
     print('Lead time error')
