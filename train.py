@@ -21,10 +21,10 @@ out_path = 'out/'
 
 
 node_feat_filename = 'node_feats_ssta_1980_2010.npy'
-adj_filename = 'adj_mat_0.8.npy'
+adj_filename = 'adj_mat_0.9.npy'
 
 window_size = 12
-lead_time = 1
+lead_time = 2
 learning_rate = 0.01 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for SSTs
 #learning_rate = 0.01 # For the GraphSAGE-LSTM
 weight_decay = 0.0001 # 0.0001 for RMSProp
@@ -75,8 +75,8 @@ if lead_time > 1:
         x = []
         y = []
         for node_i in range(node_feat_grid.shape[0]):
-            x.append(node_feat_grid_normalized[node_i][time_i : time_i + window_size])
-            x.append(0) # Initialize the first feature as zero, later replaced by the predicted feature at the target time.
+            x_slice = list(node_feat_grid_normalized[node_i][time_i : time_i + window_size]) + [0] # Initialize the first feature as zero, later replaced by the predicted feature at the target time.
+            x.append(x_slice)
             y.append(node_feat_grid_normalized[node_i][time_i + window_size + lead_time - 1])
         x = torch.tensor(np.array(x))
         y = torch.tensor(np.array(y))
@@ -173,8 +173,8 @@ if lead_time > 1:
                 x = []
                 y = []
                 for node_i in range(node_feat_grid.shape[0]):
-                    x.append(node_feat_grid_normalized[node_i][time_i : time_i + window_size])
-                    x.append(0) # Initialize the first feature as zero, later replaced by the predicted feature at the target time.
+                    x_slice = list(node_feat_grid_normalized[node_i][time_i : time_i + window_size]) + [0] # Initialize the first feature as zero, later replaced by the predicted feature at the target time.
+                    x.append(x_slice)
                     y.append(node_feat_grid_normalized[node_i][time_i + window_size + i - 1])
                 x = torch.tensor(np.array(x))
                 y = torch.tensor(np.array(y))
