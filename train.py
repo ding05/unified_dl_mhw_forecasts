@@ -19,7 +19,6 @@ data_path = 'data/'
 models_path = 'configs/'
 out_path = 'out/'
 
-
 node_feat_filename = 'node_feats_ssta_1980_2010.npy'
 adj_filename = 'adj_mat_0.9.npy'
 
