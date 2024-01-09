@@ -68,13 +68,14 @@ torch.set_printoptions(precision=8)
 # If lead time is greater than 1, use diffusion to interpolate the next time steps.
 if lead_time > 1:
     
-    # Generate PyG graphs for the interpolator network.
-    graph_list = []
+    # Generate PyG graphs for Forecaster.
+    graph_list_fc = []
     for time_i in range(num_time):
         x = []
         y = []
         for node_i in range(node_feat_grid.shape[0]):
-            x_slice = list(node_feat_grid_normalized[node_i][time_i : time_i + window_size]) + [0] # Initialize the first feature as zero, later replaced by the predicted feature at the target time.
+            x_slice = list(node_feat_grid_normalized[node_i][time_i : time_i + window_size]) + [0] * (lead_time - 1) # Initialize the last feature(s) as zero, later replaced by the interpolated features before the target time.
+            print(x_slice)
             x.append(x_slice)
             y.append(node_feat_grid_normalized[node_i][time_i + window_size + lead_time - 1])
         x = torch.tensor(np.array(x), dtype=torch.float)
@@ -82,7 +83,30 @@ if lead_time > 1:
         # Generate incomplete graphs with the adjacency matrix.
         edge_index = torch.tensor(adj_mat, dtype=torch.long)
         data = Data(x=x, y=y, edge_index=edge_index, num_nodes=node_feat_grid.shape[0], num_edges=adj_mat.shape[1], has_isolated_nodes=True, has_self_loops=False, is_undirected=True)
-        graph_list.append(data)
+        graph_list_fc.append(data)
+    
+    print('Inputs of the first node in the first graph, i.e. the first time step:', graph_list_fc[0].x[0])
+    print('Check if they match those in the node features:', node_feat_grid[0][:13])
+    print('Check if they match those in the normalized node features:', node_feat_grid_normalized[0][:13])
+    print('----------')
+    print()
+
+    # Generate PyG graphs for Interpolator(s).
+    graph_list_ipt = []
+    for time_i in range(num_time):
+        x = []
+        y = []
+        for node_i in range(node_feat_grid.shape[0]):
+            x_slice = list(node_feat_grid_normalized[node_i][time_i : time_i + window_size]) + [0]  # Initialize the last feature as zero, later replaced by the forecasted feature at the target time.
+            print(x_slice)
+            x.append(x_slice)
+            y.append(node_feat_grid_normalized[node_i][time_i + window_size : time_i + window_size + lead_time - 1])
+        x = torch.tensor(np.array(x), dtype=torch.float)
+        y = torch.tensor(np.array(y), dtype=torch.float)
+        # Generate incomplete graphs with the adjacency matrix.
+        edge_index = torch.tensor(adj_mat, dtype=torch.long)
+        data = Data(x=x, y=y, edge_index=edge_index, num_nodes=node_feat_grid.shape[0], num_edges=adj_mat.shape[1], has_isolated_nodes=True, has_self_loops=False, is_undirected=True)
+        graph_list_ipt.append(data)
     
     print('Inputs of the first node in the first graph, i.e. the first time step:', graph_list[0].x[0])
     print('Check if they match those in the node features:', node_feat_grid[0][:13])
@@ -92,11 +116,15 @@ if lead_time > 1:
     
     # Split the data.
     
-    train_graph_list = graph_list[:840]
-    val_graph_list = graph_list[840:-1]
-    test_graph_list = graph_list[840:-1]
+    train_graph_list_fc = graph_list[:840]
+    val_graph_list_fc = graph_list[840:-1]
+    test_graph_list_fc = graph_list[840:-1]
+
+    train_graph_list_ipt = graph_list[:840]
+    val_graph_list_ipt = graph_list[840:-1]
+    test_graph_list_ipt = graph_list[840:-1]
     
-    test_node_feats = node_feat_grid_normalized[:, 840 + window_size + lead_time - 1:-1]
+    test_node_feats_fc = node_feat_grid_normalized[:, 840 + window_size + lead_time - 1:-1]
     
     # Compute the percentiles using the training set only.
     node_feats_90 = np.percentile(node_feat_grid[:, :840], 90, axis=1)
@@ -148,6 +176,7 @@ if lead_time > 1:
         #model.train()
         # Iterate over the lead time to train the interpolators and train/refine the forecaster.
         print('Epoch [{}/{}]'.format(epoch + 1, num_epochs))
+        pred_node_feat_list = []
         for i in range(1, lead_time):
             
             # Iterate over the training data.
@@ -155,7 +184,7 @@ if lead_time > 1:
             # Train/refine the forecaster.
             print('Train/refine Forecaster.')
             forecaster.train()
-            for data in train_graph_list:
+            for data in train_graph_list_fc:
                 optimizer_forecaster.zero_grad()
                 output = forecaster([data])
                 loss = criterion(output.squeeze(), data.y.squeeze())
@@ -165,15 +194,18 @@ if lead_time > 1:
                 optimizer_forecaster.step()
             loss_epochs.append(loss.item())
             
-            # Get the forecasted output and update the graphs.
+            # Get the forecasted output and update the graphs for training Interpolator(s).
+            print('Append the predicted output.')
             pred_node_feat_list.append(output.squeeze())
-            for graph in train_graph_list:
+            for graph in train_graph_list_ipt:
                 x = graph.x
                 for node_i in range(x.shape[0]):
                     x[node_i, -1] = pred_node_feat_list[node_i]
                 graph.x = x
             
+            """
             # Define the graph set for training an interpolator.
+            print('Define the graph set for training Interpolator [{}/{}].'.format(i, lead_time - 1))
             graph_itp_list = []
             for time_i in range(num_time):
                 x = []
@@ -188,35 +220,34 @@ if lead_time > 1:
                 edge_index = torch.tensor(adj_mat, dtype=torch.long)
                 data = Data(x=x, y=y, edge_index=edge_index, num_nodes=node_feat_grid.shape[0], num_edges=adj_mat.shape[1], has_isolated_nodes=True, has_self_loops=False, is_undirected=True)
                 graph_itp_list.append(data)
-                
-            train_graph_itp_list = graph_itp_list[:840]
             
             # Update the graph with the predicted values at the target time.
-            for graph in train_graph_itp_list:
+            for graph in train_graph_list_ipt:
                 x = graph.x
                 for node_i in range(x.shape[0]):
                     x[node_i, -1] = pred_node_feat_list[node_i]
                 graph.x = x
+            """
                     
             # Train an interpolator.
-            print('Train Interpolator [{}/{}]'.format(i, lead_time - 1))
+            print('Train Interpolator [{}/{}].'.format(i, lead_time - 1))
             interpolators[i].train()
-            for data in train_graph_itp_list:
+            for data in train_graph_list_itp:
                 optimizers_interpolator[i].zero_grad()
                 output = interpolators[i]([data])
-                loss = criterion(output.squeeze(), data.y.squeeze())
+                loss = criterion(output.squeeze(), data.y[i - 1].squeeze())
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss.backward()
                 optimizers_interpolator[i].step()
             loss_epochs.append(loss.item())  
             
-            # Get the interpolated output and update the graphs.
+            # Get the interpolated output and update the graphs for training Forecaster.
             pred_node_feat_list.append(output.squeeze())
-            for graph in train_graph_list:
+            for graph in train_graph_list_fc:
                 x = graph.x
                 for node_i in range(x.shape[0]):
-                    x[node_i, i - 1] = pred_node_feat_list[node_i]
+                    x[node_i, window_size + i] = pred_node_feat_list[node_i]
                 graph.x = x
             
             """
