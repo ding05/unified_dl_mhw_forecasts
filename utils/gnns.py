@@ -35,7 +35,7 @@ class MultiGraphSage_Dropout(nn.Module):
         for i, data in enumerate(data_list):
             x = data.x
             for j, layer in enumerate(self.convs[i]):
-                x = layer(x, data.edge_index) if j % 2 == 0 else layer(x)  # Apply edge_index to SAGEConv and not to dropout.
+                x = layer(x, data.edge_index) if j % 2 == 0 else layer(x) # Apply edge_index to SAGEConv and not to dropout.
                 if j % 2 == 0:
                     x = torch.tanh(x)
             x_list.append(x)
