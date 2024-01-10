@@ -75,7 +75,7 @@ if lead_time > 1:
         y = []
         for node_i in range(node_feat_grid.shape[0]):
             x_slice = list(node_feat_grid_normalized[node_i][time_i : time_i + window_size]) + [0] * (lead_time - 1) # Initialize the last feature(s) as zero, later replaced by the interpolated features before the target time.
-            print(x_slice)
+            #print(x_slice)
             x.append(x_slice)
             y.append(node_feat_grid_normalized[node_i][time_i + window_size + lead_time - 1])
         x = torch.tensor(np.array(x), dtype=torch.float)
@@ -98,7 +98,7 @@ if lead_time > 1:
         y = []
         for node_i in range(node_feat_grid.shape[0]):
             x_slice = list(node_feat_grid_normalized[node_i][time_i : time_i + window_size]) + [0]  # Initialize the last feature as zero, later replaced by the forecasted feature at the target time.
-            print(x_slice)
+            #print(x_slice)
             x.append(x_slice)
             y.append(node_feat_grid_normalized[node_i][time_i + window_size : time_i + window_size + lead_time - 1])
         x = torch.tensor(np.array(x), dtype=torch.float)
@@ -139,8 +139,8 @@ if lead_time > 1:
     # Several interpolators and one forecaster
     interpolators = {}
     for i in range(1, lead_time):
-        interpolators[i], model_class = MultiGraphSage_Dropout(in_channels=graph_list[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list), aggr='mean'), f'SAGE_ITP_{i}'
-    forecaster, model_class = MultiGraphSage(in_channels=graph_list[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list), aggr='mean'), 'SAGE_FCS'
+        interpolators[i], model_class = MultiGraphSage_Dropout(in_channels=graph_list_ipt[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list_ipt), aggr='mean'), f'SAGE_ITP_{i}'
+    forecaster, model_class = MultiGraphSage(in_channels=graph_list_fc[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list_fc), aggr='mean'), 'SAGE_FCS'
     
     # Define the loss function.
     criterion = nn.MSELoss()
@@ -163,7 +163,8 @@ if lead_time > 1:
     start = time.time()
     
     # Record the results by epoch.
-    loss_epochs = []
+    loss_epochs_fc = []
+    loss_epochs_ipt = []
     val_mse_nodes_epochs = []
     val_precision_nodes_epochs = []
     val_recall_nodes_epochs = []
@@ -192,7 +193,7 @@ if lead_time > 1:
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss.backward()
                 optimizer_forecaster.step()
-            loss_epochs.append(loss.item())
+            loss_epochs_fc.append(loss.item())
             
             # Get the forecasted output and update the graphs for training Interpolator(s).
             print('Append the predicted output.')
@@ -200,7 +201,7 @@ if lead_time > 1:
             for graph in train_graph_list_ipt:
                 x = graph.x
                 for node_i in range(x.shape[0]):
-                    x[node_i, -1] = pred_node_feat_list[node_i]
+                    x[node_i, -1] = pred_node_feat_list[0][node_i]
                 graph.x = x
             
             """
@@ -232,22 +233,24 @@ if lead_time > 1:
             # Train an interpolator.
             print('Train Interpolator [{}/{}].'.format(i, lead_time - 1))
             interpolators[i].train()
-            for data in train_graph_list_itp:
+            for data in train_graph_list_ipt:
                 optimizers_interpolator[i].zero_grad()
                 output = interpolators[i]([data])
-                loss = criterion(output.squeeze(), data.y[i - 1].squeeze())
+                print('data.y:', data.y)
+                print('data.y:', data.y.shape)
+                loss_ipt = criterion(output.squeeze(), data.y[:, i - 1].squeeze())
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
-                loss.backward()
+                loss_ipt.backward(retain_graph=True)
                 optimizers_interpolator[i].step()
-            loss_epochs.append(loss.item())  
+            loss_epochs_ipt.append(loss_ipt.item())  
             
             # Get the interpolated output and update the graphs for training Forecaster.
             pred_node_feat_list.append(output.squeeze())
             for graph in train_graph_list_fc:
                 x = graph.x
                 for node_i in range(x.shape[0]):
-                    x[node_i, window_size + i] = pred_node_feat_list[node_i]
+                    x[node_i, window_size + i] = pred_node_feat_list[0][node_i]
                 graph.x = x
             
             """
