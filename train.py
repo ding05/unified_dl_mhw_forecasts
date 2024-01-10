@@ -108,7 +108,7 @@ if lead_time > 1:
         data = Data(x=x, y=y, edge_index=edge_index, num_nodes=node_feat_grid.shape[0], num_edges=adj_mat.shape[1], has_isolated_nodes=True, has_self_loops=False, is_undirected=True)
         graph_list_ipt.append(data)
     
-    print('Inputs of the first node in the first graph, i.e. the first time step:', graph_list[0].x[0])
+    print('Inputs of the first node in the first graph, i.e. the first time step:', graph_list_ipt[0].x[0])
     print('Check if they match those in the node features:', node_feat_grid[0][:13])
     print('Check if they match those in the normalized node features:', node_feat_grid_normalized[0][:13])
     print('----------')
@@ -116,13 +116,13 @@ if lead_time > 1:
     
     # Split the data.
     
-    train_graph_list_fc = graph_list[:840]
-    val_graph_list_fc = graph_list[840:-1]
-    test_graph_list_fc = graph_list[840:-1]
+    train_graph_list_fc = graph_list_fc[:840]
+    val_graph_list_fc = graph_list_fc[840:-1]
+    test_graph_list_fc = graph_list_fc[840:-1]
 
-    train_graph_list_ipt = graph_list[:840]
-    val_graph_list_ipt = graph_list[840:-1]
-    test_graph_list_ipt = graph_list[840:-1]
+    train_graph_list_ipt = graph_list_ipt[:840]
+    val_graph_list_ipt = graph_list_ipt[840:-1]
+    test_graph_list_ipt = graph_list_ipt[840:-1]
     
     test_node_feats_fc = node_feat_grid_normalized[:, 840 + window_size + lead_time - 1:-1]
     
