@@ -236,8 +236,6 @@ if lead_time > 1:
             for data in train_graph_list_ipt:
                 optimizers_interpolator[i].zero_grad()
                 output = interpolators[i]([data])
-                print('data.y:', data.y)
-                print('data.y:', data.y.shape)
                 loss_ipt = criterion(output.squeeze(), data.y[:, i - 1].squeeze())
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
