@@ -29,7 +29,7 @@ learning_rate = 0.01 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for S
 weight_decay = 0.0001 # 0.0001 for RMSProp
 momentum = 0.9
 l1_ratio = 1
-num_epochs = 1 #1000, 400, 200
+num_epochs = 5 #1000, 400, 200
 # Early stopping, if the validation MSE has not improved for "patience" epochs, stop training.
 patience = num_epochs #100, 40, 20
 min_val_mse = np.inf
@@ -136,7 +136,7 @@ if lead_time > 1:
     threshold_tensor = torch.tensor(node_feats_normalized_90).float()
     
     # Define the models.
-    # Several interpolators and one forecaster
+    # One or more Interpolators and one Forecaster
     interpolators = {}
     for i in range(1, lead_time):
         interpolators[i], model_class = MultiGraphSage_Dropout(in_channels=graph_list_ipt[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list_ipt), aggr='mean'), f'SAGE_ITP_{i}'
@@ -175,14 +175,17 @@ if lead_time > 1:
     for epoch in range(num_epochs):
         # Train the model.
         #model.train()
-        # Iterate over the lead time to train the interpolators and train/refine the forecaster.
+        # Iterate over the lead time to train Interpolator(s) and train/refine Forecaster.
         print('Epoch [{}/{}]'.format(epoch + 1, num_epochs))
-        pred_node_feat_list = []
+        pred_node_feat_list_fc = []
+        
         for i in range(1, lead_time):
             
             # Iterate over the training data.
             print('Lead time [{}/{}]'.format(i, lead_time))
-            # Train/refine the forecaster.
+            pred_node_feat_list_ipt = []
+            
+            # Train/refine Forecaster.
             print('Train/refine Forecaster.')
             forecaster.train()
             for data in train_graph_list_fc:
@@ -195,42 +198,21 @@ if lead_time > 1:
                 optimizer_forecaster.step()
             loss_epochs_fc.append(loss.item())
             
-            # Get the forecasted output and update the graphs for training Interpolator(s).
-            print('Append the predicted output.')
-            pred_node_feat_list.append(output.squeeze())
-            for graph in train_graph_list_ipt:
-                x = graph.x
-                for node_i in range(x.shape[0]):
-                    x[node_i, -1] = pred_node_feat_list[0][node_i]
-                graph.x = x
-            
-            """
-            # Define the graph set for training an interpolator.
-            print('Define the graph set for training Interpolator [{}/{}].'.format(i, lead_time - 1))
-            graph_itp_list = []
-            for time_i in range(num_time):
-                x = []
-                y = []
-                for node_i in range(node_feat_grid.shape[0]):
-                    x_slice = list(node_feat_grid_normalized[node_i][time_i : time_i + window_size]) + [0] # Initialize the first feature as zero, later replaced by the predicted feature at the target time.
-                    x.append(x_slice)
-                    y.append(node_feat_grid_normalized[node_i][time_i + window_size + i - 1])
-                x = torch.tensor(np.array(x), dtype=torch.float)
-                y = torch.tensor(np.array(y), dtype=torch.float)
-                # Generate incomplete graphs with the adjacency matrix.
-                edge_index = torch.tensor(adj_mat, dtype=torch.long)
-                data = Data(x=x, y=y, edge_index=edge_index, num_nodes=node_feat_grid.shape[0], num_edges=adj_mat.shape[1], has_isolated_nodes=True, has_self_loops=False, is_undirected=True)
-                graph_itp_list.append(data)
-            
-            # Update the graph with the predicted values at the target time.
-            for graph in train_graph_list_ipt:
-                x = graph.x
-                for node_i in range(x.shape[0]):
-                    x[node_i, -1] = pred_node_feat_list[node_i]
-                graph.x = x
-            """
+            # Detach the tensor to prevent unwanted graph connections, which makes sure the output is not part of the computation graph in the next iteration.
+            pred_node_feat_fc = output.squeeze().detach()
+            pred_node_feat_list_fc.append(pred_node_feat_fc)
                     
-            # Train an interpolator.
+            # Get the forecasted output and update the graphs for training Interpolator(s).
+            # Update graphs for training Interpolator(s).
+            print('Update graphs for training Interpolator(s).')
+            for graph in train_graph_list_ipt:
+                x = graph.x
+                # Use cloned tensor to avoid in-place operation, which avoids modifying tensor in-place which could cause computation graph issues
+                for node_i in range(x.shape[0]):
+                    x[node_i, -1] = pred_node_feat_fc[node_i].clone()
+                graph.x = x
+                    
+            # Train one Interpolator.
             print('Train Interpolator [{}/{}].'.format(i, lead_time - 1))
             interpolators[i].train()
             for data in train_graph_list_ipt:
@@ -239,16 +221,20 @@ if lead_time > 1:
                 loss_ipt = criterion(output.squeeze(), data.y[:, i - 1].squeeze())
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
-                loss_ipt.backward(retain_graph=True)
+                loss_ipt.backward()
                 optimizers_interpolator[i].step()
             loss_epochs_ipt.append(loss_ipt.item())  
+
+            pred_node_feat_ipt = output.squeeze().detach()
+            pred_node_feat_list_ipt.append(pred_node_feat_ipt)
             
             # Get the interpolated output and update the graphs for training Forecaster.
-            pred_node_feat_list.append(output.squeeze())
+            # Update graphs for training Forecaster
+            print('Update graphs for training Forecaster.')
             for graph in train_graph_list_fc:
                 x = graph.x
                 for node_i in range(x.shape[0]):
-                    x[node_i, window_size + i] = pred_node_feat_list[0][node_i]
+                    x[node_i, window_size + i - 1] = pred_node_feat_ipt[node_i].clone()
                 graph.x = x
             
             """
