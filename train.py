@@ -20,7 +20,7 @@ models_path = 'configs/'
 out_path = 'out/'
 
 node_feat_filename = 'node_feats_ssta_1980_2010.npy'
-adj_filename = 'adj_mat_0.9.npy'
+adj_filename = 'adj_mat_0.8.npy'
 
 window_size = 12
 lead_time = 3
@@ -65,6 +65,7 @@ torch.set_printoptions(precision=8)
 
 ##### ##### ##### ##### #####
 ##### ##### ##### ##### #####
+
 # If lead time is greater than 1, use diffusion to interpolate the next time steps.
 if lead_time > 1:
     
@@ -236,27 +237,33 @@ if lead_time > 1:
                 for node_i in range(x.shape[0]):
                     x[node_i, window_size + i - 1] = pred_node_feat_ipt[node_i].clone()
                 graph.x = x
-            
-            """
-            # Evaluate the model.
-            model.eval()
-            
-            # Compute the MSE, precision, recall, and critical success index (CSI) on the validation set.
-            with torch.no_grad():
-                val_mse_nodes = 0
-                pred_node_feat_list = []
                 
-                for data in val_graph_list:
-                    output = model([data])
-                    val_mse = criterion_test(output.squeeze(), data.y.squeeze())
-                    #print('Val predictions:', output.squeeze().tolist()[::300])
-                    #print('Val observations:', data.y.squeeze().tolist()[::300])
-                    val_mse_nodes += val_mse
-                    
-                    # The model output graph by graph, but we are interested in time series at node by node.
-                    # Transform the shapes.
-                    pred_node_feat_list.append(output.squeeze())
-            """
+        # Current time
+        cur = time.time()
+        print(f'Time spent: {cur - start} seconds')
+        print('----------')
+        print()
+        
+        """
+        # Evaluate the model.
+        model.eval()
+        
+        # Compute the MSE, precision, recall, and critical success index (CSI) on the validation set.
+        with torch.no_grad():
+            val_mse_nodes = 0
+            pred_node_feat_list = []
+            
+            for data in val_graph_list:
+                output = model([data])
+                val_mse = criterion_test(output.squeeze(), data.y.squeeze())
+                #print('Val predictions:', output.squeeze().tolist()[::300])
+                #print('Val observations:', data.y.squeeze().tolist()[::300])
+                val_mse_nodes += val_mse
+                
+                # The model output graph by graph, but we are interested in time series at node by node.
+                # Transform the shapes.
+                pred_node_feat_list.append(output.squeeze())
+        """
 
 ##### ##### ##### ##### #####
 ##### ##### ##### ##### #####
