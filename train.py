@@ -20,7 +20,7 @@ models_path = 'configs/'
 out_path = 'out/'
 
 node_feat_filename = 'node_feats_ssta_1980_2010.npy'
-adj_filename = 'adj_mat_0.9.npy'
+adj_filename = 'adj_mat_0.8.npy'
 
 window_size = 12
 lead_time = 3
@@ -29,7 +29,7 @@ learning_rate = 0.01 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for S
 weight_decay = 0.0001 # 0.0001 for RMSProp
 momentum = 0.9
 l1_ratio = 1
-num_epochs = 5 #1000, 400, 200
+num_epochs = 50 #1000, 400, 200
 # Early stopping, if the validation MSE has not improved for "patience" epochs, stop training.
 patience = num_epochs #100, 40, 20
 min_val_mse = np.inf
@@ -197,21 +197,22 @@ if lead_time > 1:
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss.backward()
                 optimizer_forecaster.step()
+                
+                # Detach the tensor to prevent unwanted graph connections, which makes sure the output is not part of the computation graph in the next iteration.
+                pred_node_feat_fc = output.squeeze().detach()
+                pred_node_feat_list_fc.append(pred_node_feat_fc)
+                
             loss_epochs_fc.append(loss.item())
-            
-            # Detach the tensor to prevent unwanted graph connections, which makes sure the output is not part of the computation graph in the next iteration.
-            pred_node_feat_fc = output.squeeze().detach()
-            pred_node_feat_list_fc.append(pred_node_feat_fc)
                     
             # Get the forecasted output and update the graphs for training Interpolator(s).
             # Update graphs for training Interpolator(s).
             print('Update graphs for training Interpolator(s).')
-            for graph in train_graph_list_ipt:
-                x = graph.x
-                # Use cloned tensor to avoid in-place operation, which avoids modifying tensor in-place which could cause computation graph issues
+            for g in range(len(train_graph_list_ipt)):
+                x = train_graph_list_ipt[g].x
+                # Use cloned tensor to avoid in-place operation, which avoids modifying tensor in-place which could cause computation graph issues.
                 for node_i in range(x.shape[0]):
-                    x[node_i, -1] = pred_node_feat_fc[node_i].clone()
-                graph.x = x
+                    x[node_i, -1] = pred_node_feat_list_fc[g][node_i].clone()
+                train_graph_list_ipt[g].x = x
                     
             # Train one Interpolator.
             print('Train Interpolator [{}/{}].'.format(i, lead_time - 1))
@@ -224,19 +225,20 @@ if lead_time > 1:
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss_ipt.backward()
                 optimizers_interpolator[i].step()
-            loss_epochs_ipt.append(loss_ipt.item())  
-
-            pred_node_feat_ipt = output.squeeze().detach()
-            pred_node_feat_list_ipt.append(pred_node_feat_ipt)
+                
+                pred_node_feat_ipt = output.squeeze().detach()
+                pred_node_feat_list_ipt.append(pred_node_feat_ipt)
+            
+            loss_epochs_ipt.append(loss_ipt.item())
             
             # Get the interpolated output and update the graphs for training Forecaster.
             # Update graphs for training Forecaster
             print('Update graphs for training Forecaster.')
-            for graph in train_graph_list_fc:
-                x = graph.x
+            for g in range(len(train_graph_list_fc)):
+                x = train_graph_list_fc[g].x
                 for node_i in range(x.shape[0]):
-                    x[node_i, window_size + i - 1] = pred_node_feat_ipt[node_i].clone()
-                graph.x = x
+                    x[node_i, window_size + i - 1] = pred_node_feat_list_ipt[g][node_i].clone()
+                train_graph_list_fc[g].x = x
                 
         # Current time
         cur = time.time()
@@ -246,23 +248,23 @@ if lead_time > 1:
         
         """
         # Evaluate the model.
-        model.eval()
-        
-        # Compute the MSE, precision, recall, and critical success index (CSI) on the validation set.
-        with torch.no_grad():
-            val_mse_nodes = 0
-            pred_node_feat_list = []
-            
-            for data in val_graph_list:
-                output = model([data])
-                val_mse = criterion_test(output.squeeze(), data.y.squeeze())
-                #print('Val predictions:', output.squeeze().tolist()[::300])
-                #print('Val observations:', data.y.squeeze().tolist()[::300])
-                val_mse_nodes += val_mse
-                
-                # The model output graph by graph, but we are interested in time series at node by node.
-                # Transform the shapes.
-                pred_node_feat_list.append(output.squeeze())
+        print('Evaluate the models.')
+        forecaster.eval()
+        for i in range(1, lead_time):
+             interpolator[i].eval()
+             
+             # Interpolate the values.
+             pred_node_feat_fc = output.squeeze().detach()
+             pred_node_feat_list_fc.append(pred_node_feat_fc)
+
+             # Compute the MSE, precision, recall, and critical success index (CSI) on the validation set.
+             with torch.no_grad():
+                 val_mse_nodes = 0
+                 pred_node_feat_list = []
+                 
+                 for data in val_graph_list_fc:
+                     output = forecaster([data])
+                     pred_node_feat_list.append(output.squeeze())
         """
 
 ##### ##### ##### ##### #####
