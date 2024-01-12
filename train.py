@@ -20,7 +20,7 @@ models_path = 'configs/'
 out_path = 'out/'
 
 node_feat_filename = 'node_feats_ssta_1980_2010.npy'
-adj_filename = 'adj_mat_0.8.npy'
+adj_filename = 'adj_mat_0.9.npy'
 
 window_size = 12
 lead_time = 3
@@ -154,8 +154,7 @@ if lead_time > 1:
         optimizers_interpolator[i] = torch.optim.AdamW(interpolators[i].parameters(), lr=learning_rate, weight_decay=weight_decay)
     optimizer_forecaster = torch.optim.AdamW(forecaster.parameters(), lr=learning_rate, weight_decay=weight_decay)
     
-    # Train a multi-graph GNN model.
-    
+    # Train multi-graph GNN models.
     print('Start training.')
     print('----------')
     print()
@@ -245,8 +244,6 @@ if lead_time > 1:
         forecaster.eval()
         for i in range(1, lead_time):
              interpolators[i].eval()
-
-             # Compute the MSE, precision, recall, and critical success index (CSI) on the validation set.
              
              # Interpolate the values.
              with torch.no_grad():
@@ -279,6 +276,7 @@ if lead_time > 1:
                      val_graph_list_fc[g].x = x
                     
         # Evaluate Forecaster.
+        # Compute the MSE, precision, recall, and critical success index (CSI) on the validation set.
         for data in val_graph_list_fc:
             output = forecaster([data])
            
