@@ -239,33 +239,57 @@ if lead_time > 1:
                 for node_i in range(x.shape[0]):
                     x[node_i, window_size + i - 1] = pred_node_feat_list_ipt[g][node_i].clone()
                 train_graph_list_fc[g].x = x
-                
-        # Current time
-        cur = time.time()
-        print(f'Time spent: {cur - start} seconds')
-        print('----------')
-        print()
         
-        """
         # Evaluate the model.
         print('Evaluate the models.')
         forecaster.eval()
         for i in range(1, lead_time):
-             interpolator[i].eval()
-             
-             # Interpolate the values.
-             pred_node_feat_fc = output.squeeze().detach()
-             pred_node_feat_list_fc.append(pred_node_feat_fc)
+             interpolators[i].eval()
 
              # Compute the MSE, precision, recall, and critical success index (CSI) on the validation set.
+             
+             # Interpolate the values.
              with torch.no_grad():
                  val_mse_nodes = 0
                  pred_node_feat_list = []
                  
                  for data in val_graph_list_fc:
                      output = forecaster([data])
-                     pred_node_feat_list.append(output.squeeze())
-        """
+                     
+                     pred_node_feat_fc = output.squeeze().detach()
+                     pred_node_feat_list_fc.append(pred_node_feat_fc)
+                 
+                 for g in range(len(val_graph_list_ipt)):
+                     x = val_graph_list_ipt[g].x
+                     # Use cloned tensor to avoid in-place operation, which avoids modifying tensor in-place which could cause computation graph issues.
+                     for node_i in range(x.shape[0]):
+                         x[node_i, -1] = pred_node_feat_list_fc[g][node_i].clone()
+                     val_graph_list_ipt[g].x = x
+
+                 for data in val_graph_list_ipt:
+                     output = interpolators[i]([data])
+                    
+                     pred_node_feat_ipt = output.squeeze().detach()
+                     pred_node_feat_list_ipt.append(pred_node_feat_ipt)   
+                
+                 for g in range(len(val_graph_list_fc)):
+                     x = val_graph_list_fc[g].x
+                     for node_i in range(x.shape[0]):
+                        x[node_i, window_size + i - 1] = pred_node_feat_list_ipt[g][node_i].clone()
+                     val_graph_list_fc[g].x = x
+                    
+        # Evaluate Forecaster.
+        for data in val_graph_list_fc:
+            output = forecaster([data])
+           
+            pred_node_feat_fc = output.squeeze().detach()
+            pred_node_feat_list_fc.append(pred_node_feat_fc)
+
+        # Current time
+        cur = time.time()
+        print(f'Time spent: {cur - start} seconds')
+        print('----------')
+        print()
 
 ##### ##### ##### ##### #####
 ##### ##### ##### ##### #####
