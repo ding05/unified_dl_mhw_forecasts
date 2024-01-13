@@ -240,9 +240,11 @@ if lead_time > 1:
                 train_graph_list_fc[g].x = x
         
         # Evaluate the model.
+        print('----------')
         print('Evaluate the models.')
         forecaster.eval()
         for i in range(1, lead_time):
+             # Deactivate the dropout stochasticity of Interpolator(s).
              interpolators[i].eval()
              
              # Interpolate the values.
@@ -310,9 +312,6 @@ if lead_time > 1:
             # CSI
             val_csi_nodes = np.nanmean([calculate_csi(pred_node_feats[i], test_node_feats_fc[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
             val_csi_nodes_epochs.append(val_csi_nodes.item())
-    
-        print('----------')
-        print()
     
         # Print the current epoch and validation MSE.
         #print('Epoch [{}/{}], Loss: {:.6f}, Validation MSE (calculated by column / graph): {:.6f}'.format(epoch + 1, num_epochs, loss.item(), val_mse_nodes))
