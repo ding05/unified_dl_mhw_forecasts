@@ -291,24 +291,24 @@ if lead_time > 1:
                 #print('Val observations:', [round(i, 4) for i in data.y.squeeze().tolist()[::300]])
                 val_mse_nodes += val_mse
                
-                pred_node_feat_fc = output.squeeze().detach()
-                pred_node_feat_list_fc.append(pred_node_feat_fc)
+                pred_node_feat = output.squeeze().detach()
+                pred_node_feat_list.append(pred_node_feat)
                 
             val_mse_nodes /= len(val_graph_list_fc)
             val_mse_nodes_epochs.append(val_mse_nodes.item())
             
-            pred_node_feat_tensor = torch.stack([tensor for tensor in pred_node_feat_list_fc], dim=1)
+            pred_node_feat_tensor = torch.stack([tensor for tensor in pred_node_feat_list], dim=1)
             pred_node_feats = pred_node_feat_tensor.numpy()
             gnn_mse = np.mean((pred_node_feats - test_node_feats_fc) ** 2, axis=1)
             
             # Precision
-            val_precision_nodes = np.nanmean([calculate_precision(pred_node_feats_fc[i], test_node_feats_fc[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
+            val_precision_nodes = np.nanmean([calculate_precision(pred_node_feats[i], test_node_feats_fc[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
             val_precision_nodes_epochs.append(val_precision_nodes.item())
             # Recall
-            val_recall_nodes = np.nanmean([calculate_recall(pred_node_feats_fc[i], test_node_feats_fc[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
+            val_recall_nodes = np.nanmean([calculate_recall(pred_node_feats[i], test_node_feats_fc[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
             val_recall_nodes_epochs.append(val_recall_nodes.item())
             # CSI
-            val_csi_nodes = np.nanmean([calculate_csi(pred_node_feats_fc[i], test_node_feats_fc[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
+            val_csi_nodes = np.nanmean([calculate_csi(pred_node_feats[i], test_node_feats_fc[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
             val_csi_nodes_epochs.append(val_csi_nodes.item())
     
         print('----------')
