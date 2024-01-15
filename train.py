@@ -20,7 +20,7 @@ models_path = 'configs/'
 out_path = 'out/'
 
 node_feat_filename = 'node_feats_ssta_1980_2010.npy'
-adj_filename = 'adj_mat_0.9.npy'
+adj_filename = 'adj_mat_0.8.npy'
 
 window_size = 12
 lead_time = 3
@@ -140,7 +140,7 @@ if lead_time > 1:
     # One or more Interpolators and one Forecaster
     interpolators = {}
     for i in range(1, lead_time):
-        interpolators[i], model_class = MultiGraphSage_Dropout(in_channels=graph_list_ipt[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list_ipt), aggr='mean'), f'SAGE_ITP_{i}'
+        interpolators[i], model_class = MultiGraphSage_Dropout(in_channels=graph_list_ipt[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list_ipt), aggr='mean', dropout_rate=0.05), f'SAGE_ITP_{i}'
     forecaster, model_class = MultiGraphSage(in_channels=graph_list_fc[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list_fc), aggr='mean'), 'SAGE_FCS'
     
     # Define the loss function.
