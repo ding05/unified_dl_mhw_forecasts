@@ -207,7 +207,7 @@ if lead_time > 1:
                     
             # Get the forecasted output and update the graphs for training Interpolator(s).
             # Update graphs for training Interpolator(s).
-            print('Update graphs for training Interpolator(s).')
+            #print('Update graphs for training Interpolator(s).')
             for g in range(len(train_graph_list_ipt)):
                 x = train_graph_list_ipt[g].x
                 # Use cloned tensor to avoid in-place operation, which avoids modifying tensor in-place which could cause computation graph issues.
@@ -234,7 +234,7 @@ if lead_time > 1:
             
             # Get the interpolated output and update the graphs for training Forecaster.
             # Update graphs for training Forecaster
-            print('Update graphs for training Forecaster.')
+            #print('Update graphs for training Forecaster.')
             for g in range(len(train_graph_list_fc)):
                 x = train_graph_list_fc[g].x
                 for node_i in range(x.shape[0]):
