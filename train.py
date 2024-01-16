@@ -161,6 +161,7 @@ if lead_time > 1:
     start = time.time()
     
     # Record the results by epoch.
+    loss_epochs = []
     loss_epochs_fc = []
     loss_epochs_ipt = []
     val_mse_nodes_epochs = []
@@ -236,6 +237,8 @@ if lead_time > 1:
                 for node_i in range(x.shape[0]):
                     x[node_i, window_size + i - 1] = pred_node_feat_list_ipt[g][node_i].clone()
                 train_graph_list_fc[g].x = x
+        
+        loss_epochs.append(loss.item()) # Save only the last loss value of Forecaster per epoch.
         
         # Evaluate the model.
         print('----------')
@@ -328,12 +331,13 @@ if lead_time > 1:
         print('----------')
 
     # Save the results.
-    #save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_losses' + '.npy', np.array(loss_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_losses' + '.npy', np.array(loss_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_losses_fc' + '.npy', np.array(loss_epochs_fc))
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valmses' + '.npy', np.array(val_mse_nodes_epochs))
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valprecisions' + '.npy', np.array(val_precision_nodes_epochs))
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valrecalls' + '.npy', np.array(val_recall_nodes_epochs))
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valcsis' + '.npy', np.array(val_csi_nodes_epochs))
-    #save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_preds' + '.npy', best_pred_node_feats)
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_preds' + '.npy', pred_node_feats) # Predicted node features at the last epoch
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_testobs' + '.npy', test_node_feats_fc)
     
     print('Save the results in NPY files.')
