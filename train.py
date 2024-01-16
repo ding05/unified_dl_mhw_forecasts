@@ -44,20 +44,17 @@ node_feat_grid = load(data_path + node_feat_filename)
 print('Node feature grid in Kelvin:', node_feat_grid)
 print('Shape:', node_feat_grid.shape)
 print('----------')
-print()
 
 # Normalize the data to [0, 1].
 node_feat_grid_normalized = (node_feat_grid - np.min(node_feat_grid[:,:852])) / (np.max(node_feat_grid[:,:852]) - np.min(node_feat_grid[:,:852]))
 print('Normalized node feature grid:', node_feat_grid_normalized)
 print('Shape:', node_feat_grid_normalized.shape)
 print('----------')
-print()
 
 adj_mat = load(data_path + adj_filename)
 print('Adjacency matrix:', adj_mat)
 print('Shape:', adj_mat.shape)
 print('----------')
-print()
 
 # Compute the total number of time steps.
 num_time = node_feat_grid.shape[1] - window_size - lead_time + 1
@@ -92,7 +89,6 @@ if lead_time > 1:
     print('Check if they match those in the node features:', node_feat_grid[0][:13])
     print('Check if they match those in the normalized node features:', node_feat_grid_normalized[0][:13])
     print('----------')
-    print()
 
     # Generate PyG graphs for Interpolator(s).
     graph_list_ipt = []
@@ -115,7 +111,6 @@ if lead_time > 1:
     print('Check if they match those in the node features:', node_feat_grid[0][:13])
     print('Check if they match those in the normalized node features:', node_feat_grid_normalized[0][:13])
     print('----------')
-    print()
     
     # Split the data.
     
@@ -140,10 +135,12 @@ if lead_time > 1:
     
     # Define the models.
     # One or more Interpolators and one Forecaster
+    model_class = 'SAGE_Diffus'
     interpolators = {}
+    model_classes_ipt = {}
     for i in range(1, lead_time):
-        interpolators[i], model_class = MultiGraphSage_Dropout(in_channels=graph_list_ipt[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list_ipt), aggr='mean', dropout_rate=dropout_rate), f'SAGE_ITP_{i}'
-    forecaster, model_class = MultiGraphSage(in_channels=graph_list_fc[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list_fc), aggr='mean'), 'SAGE_FCS'
+        interpolators[i], model_classes_ipt[i] = MultiGraphSage_Dropout(in_channels=graph_list_ipt[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list_ipt), aggr='mean', dropout_rate=dropout_rate), f'SAGE_ITP_{i}'
+    forecaster, model_class_fc = MultiGraphSage(in_channels=graph_list_fc[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list_fc), aggr='mean'), 'SAGE_FC'
     
     # Define the loss function.
     criterion = nn.MSELoss()
@@ -159,7 +156,6 @@ if lead_time > 1:
     # Train multi-graph GNN models.
     print('Start training.')
     print('----------')
-    print()
     
     # Start time
     start = time.time()
@@ -324,13 +320,24 @@ if lead_time > 1:
         print('Validation precision by epoch:', [float('{:.6f}'.format(val_precision)) for val_precision in (val_precision_nodes_epochs[-20:] if len(val_precision_nodes_epochs) > 20 else val_precision_nodes_epochs)])
         print('Validation recall by epoch:', [float('{:.6f}'.format(val_recall)) for val_recall in (val_recall_nodes_epochs[-20:] if len(val_recall_nodes_epochs) > 20 else val_recall_nodes_epochs)])
         print('Validation CSI by epoch:', [float('{:.6f}'.format(val_csi)) for val_csi in (val_csi_nodes_epochs[-20:] if len(val_csi_nodes_epochs) > 20 else val_csi_nodes_epochs)])
-        print('Persistence MSE:', ((test_node_feats_fc[:,1:] - test_node_feats_fc[:,:-1])**2).mean())            
+        #print('Persistence MSE:', ((test_node_feats_fc[:,1:] - test_node_feats_fc[:,:-1])**2).mean())            
 
         # Current time
         cur = time.time()
         print(f'Time spent: {cur - start} seconds')
         print('----------')
-        print()
+
+    # Save the results.
+    #save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_losses' + '.npy', np.array(loss_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valmses' + '.npy', np.array(val_mse_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valprecisions' + '.npy', np.array(val_precision_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valrecalls' + '.npy', np.array(val_recall_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valcsis' + '.npy', np.array(val_csi_nodes_epochs))
+    #save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_preds' + '.npy', best_pred_node_feats)
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_testobs' + '.npy', test_node_feats_fc)
+    
+    print('Save the results in NPY files.')
+    print('----------')
 
 ##### ##### ##### ##### #####
 ##### ##### ##### ##### #####
@@ -356,7 +363,6 @@ elif lead_time == 1:
     print('Check if they match those in the node features:', node_feat_grid[0][:13])
     print('Check if they match those in the normalized node features:', node_feat_grid_normalized[0][:13])
     print('----------')
-    print()
     
     # Split the data.
     
@@ -390,7 +396,6 @@ elif lead_time == 1:
     
     print('Start training.')
     print('----------')
-    print()
     
     # Start time
     start = time.time()
@@ -453,7 +458,6 @@ elif lead_time == 1:
             val_csi_nodes_epochs.append(val_csi_nodes.item())
     
         print('----------')
-        print()
     
         # Print the current epoch and validation MSE.
         print('Epoch [{}/{}], Loss: {:.6f}, Validation MSE (calculated by column / graph): {:.6f}'.format(epoch + 1, num_epochs, loss.item(), val_mse_nodes))
@@ -483,31 +487,12 @@ elif lead_time == 1:
             break
     
     print('----------')
-    print()
     
     # End time
     stop = time.time()
     
     print(f'Complete training. Time spent: {stop - start} seconds.')
     print('----------')
-    print()
-    
-    """
-    # Test the model.
-    with torch.no_grad():
-        test_mse_nodes = 0
-        for data in test_graph_list:
-            output = model([data])
-            test_mse = criterion_test(output.squeeze(), data.y.squeeze())
-            print('Test predictions:', [round(i, 4) for i in output.squeeze().tolist()[::300]])
-            print('Test observations:', [round(i, 4) for i in data.y.squeeze().tolist()[::300]])
-            test_mse_nodes += test_mse
-        test_mse_nodes /= len(test_graph_list)
-        print('Test MSE: {:.4f}'.format(test_mse_nodes))
-    
-    print('----------')
-    print()
-    """
     
     # Save the results.
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_losses' + '.npy', np.array(loss_epochs))
@@ -520,7 +505,6 @@ elif lead_time == 1:
     
     print('Save the results in NPY files.')
     print('----------')
-    print()
     
     # Save the model.
     torch.save({
@@ -532,7 +516,6 @@ elif lead_time == 1:
     
     print('Save the checkpoint in a TAR file.')
     print('----------')
-    print()
 
 ##### ##### ##### ##### #####
 ##### ##### ##### ##### #####
