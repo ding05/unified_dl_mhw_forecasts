@@ -325,7 +325,7 @@ if lead_time > 1:
         #print('Epoch [{}/{}], Loss: {:.6f}, Validation MSE (calculated by column / graph): {:.6f}'.format(epoch + 1, num_epochs, loss.item(), val_mse_nodes))
         print('MSEs by node:', gnn_mse)
         print('Validation MSE, precision, recall, CSI, and SEDI (calculated by row / time series at nodes): {:.6f}, {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(np.mean(gnn_mse), val_precision_nodes, val_recall_nodes, val_csi_nodes, val_sedi_nodes))
-        #print('Loss by epoch:', [float('{:.6f}'.format(loss)) for loss in (loss_epochs[-20:] if len(loss_epochs) > 20 else loss_epochs)]) # Print the last 20 elements if the list is too long.
+        print('Loss by epoch:', [float('{:.6f}'.format(loss)) for loss in (loss_epochs[-20:] if len(loss_epochs) > 20 else loss_epochs)]) # Print the last 20 elements if the list is too long.
         print('Validation MSE by epoch:', [float('{:.6f}'.format(val_mse)) for val_mse in (val_mse_nodes_epochs[-20:] if len(val_mse_nodes_epochs) > 20 else val_mse_nodes_epochs)]) # Same as above.
         print('Validation precision by epoch:', [float('{:.6f}'.format(val_precision)) for val_precision in (val_precision_nodes_epochs[-20:] if len(val_precision_nodes_epochs) > 20 else val_precision_nodes_epochs)])
         print('Validation recall by epoch:', [float('{:.6f}'.format(val_recall)) for val_recall in (val_recall_nodes_epochs[-20:] if len(val_recall_nodes_epochs) > 20 else val_recall_nodes_epochs)])
@@ -350,6 +350,29 @@ if lead_time > 1:
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_testobs' + '.npy', test_node_feats_fc)
     
     print('Save the results in NPY files.')
+    print('----------')
+    
+    best_model_weights = model.state_dict()
+    best_optimizer_state = optimizer.state_dict()
+    
+    # Save the models.
+    # Save Interpolator(s).
+    for i in range(1, lead_time):
+        torch.save({
+            'epoch': num_epochs - 1,
+            'model_state_dict': interpolators[i].state_dict(),
+            'optimizer_state_dict': optimizers_interpolator[i].state_dict(),
+            #'loss': best_loss
+            }, models_path + model_classes_ipt[i] + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop))
+    # Save Forecaster.
+    torch.save({
+        'epoch': num_epochs - 1,
+        'model_state_dict': forecaster.state_dict(),
+        'optimizer_state_dict': optimizer_forecaster.state_dict(),
+        #'loss': best_loss
+        }, models_path + model_class_fc + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop))
+    
+    print('Save the checkpoints in TAR files.')
     print('----------')
 
 ##### ##### ##### ##### #####
