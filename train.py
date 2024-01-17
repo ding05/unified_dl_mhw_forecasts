@@ -359,14 +359,14 @@ if lead_time > 1:
     # Save Interpolator(s).
     for i in range(1, lead_time):
         torch.save({
-            'epoch': num_epochs - 1,
+            'epoch': num_epochs,
             'model_state_dict': interpolators[i].state_dict(),
             'optimizer_state_dict': optimizers_interpolator[i].state_dict(),
             #'loss': best_loss
             }, models_path + model_classes_ipt[i] + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop))
     # Save Forecaster.
     torch.save({
-        'epoch': num_epochs - 1,
+        'epoch': num_epochs,
         'model_state_dict': forecaster.state_dict(),
         'optimizer_state_dict': optimizer_forecaster.state_dict(),
         #'loss': best_loss
