@@ -56,7 +56,7 @@ def calculate_sedi(pred_feats, test_feats, threshold):
         F = np.nan
     else:
         F = FP / denominator
-    # SEDI alculation
+    # SEDI calculation
     logF = np.log(F) if F != 0 else np.nan
     logH = np.log(H) if H != 0 else np.nan
     log1F = np.log(1 - F) if F != 1 else np.nan
