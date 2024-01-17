@@ -143,8 +143,8 @@ if lead_time > 1:
     forecaster, model_class_fc = MultiGraphSage(in_channels=graph_list_fc[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list_fc), aggr='mean'), 'SAGE_FC'
     
     # Define the loss function.
-    criterion = nn.MSELoss()
-    #criterion = BMCLoss(0.1)
+    #criterion = nn.MSELoss()
+    criterion = BMCLoss(0.02)
     criterion_test = nn.MSELoss()
     
     # Define the optimizer.
@@ -192,6 +192,7 @@ if lead_time > 1:
                 optimizer_forecaster.zero_grad()
                 output = forecaster([data])
                 #loss = criterion(output.squeeze(), data.y.squeeze())
+                #loss, noise_var = criterion(output.squeeze(), data.y.squeeze()) # For BMSE
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
                 loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss.backward()
@@ -220,8 +221,9 @@ if lead_time > 1:
                 optimizers_interpolator[i].zero_grad()
                 output = interpolators[i]([data])
                 #loss_ipt = criterion(output.squeeze(), data.y[:, i - 1].squeeze())
+                loss_ipt, noise_var_ipt = criterion(output.squeeze(), data.y[:, i - 1].squeeze()) # For BMSE
                 #loss_ipt = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
-                loss_ipt = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+                #loss_ipt = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss_ipt.backward()
                 optimizers_interpolator[i].step()
                 
