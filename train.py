@@ -168,6 +168,7 @@ if lead_time > 1:
     val_precision_nodes_epochs = []
     val_recall_nodes_epochs = []
     val_csi_nodes_epochs = []
+    val_sedi_nodes_epochs = []
     # Early stopping starting counter
     counter = 0
 
@@ -279,12 +280,13 @@ if lead_time > 1:
                      val_graph_list_fc[g].x = x
                     
         # Evaluate Forecaster.
-        # Compute the MSE, precision, recall, and critical success index (CSI) on the validation set.
+        # Compute the MSE, precision, recall, critical success index (CSI), and symmetric extremal dependence index (SEDI) on the validation set.
         with torch.no_grad():
             val_mse_nodes = 0
             val_precision_nodes = 0
             val_recall_nodes = 0
             val_csi_nodes = 0
+            val_sedi_nodes = 0
             pred_node_feat_list = []
         
             for data in val_graph_list_fc:
@@ -313,16 +315,20 @@ if lead_time > 1:
             # CSI
             val_csi_nodes = np.nanmean([calculate_csi(pred_node_feats[i], test_node_feats_fc[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
             val_csi_nodes_epochs.append(val_csi_nodes.item())
-    
+            # SEDI
+            val_sedi_nodes = np.nanmean([calculate_sedi(pred_node_feats[i], test_node_feats_fc[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
+            val_sedi_nodes_epochs.append(val_sedi_nodes.item())
+
         # Print the current epoch and validation MSE.
         #print('Epoch [{}/{}], Loss: {:.6f}, Validation MSE (calculated by column / graph): {:.6f}'.format(epoch + 1, num_epochs, loss.item(), val_mse_nodes))
         print('MSEs by node:', gnn_mse)
-        print('Validation MSE, precision, recall, and CSI (calculated by row / time series at nodes): {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(np.mean(gnn_mse), val_precision_nodes, val_recall_nodes, val_csi_nodes))
+        print('Validation MSE, precision, recall, CSI, and SEDI (calculated by row / time series at nodes): {:.6f}, {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(np.mean(gnn_mse), val_precision_nodes, val_recall_nodes, val_csi_nodes, val_sedi_nodes))
         #print('Loss by epoch:', [float('{:.6f}'.format(loss)) for loss in (loss_epochs[-20:] if len(loss_epochs) > 20 else loss_epochs)]) # Print the last 20 elements if the list is too long.
         print('Validation MSE by epoch:', [float('{:.6f}'.format(val_mse)) for val_mse in (val_mse_nodes_epochs[-20:] if len(val_mse_nodes_epochs) > 20 else val_mse_nodes_epochs)]) # Same as above.
         print('Validation precision by epoch:', [float('{:.6f}'.format(val_precision)) for val_precision in (val_precision_nodes_epochs[-20:] if len(val_precision_nodes_epochs) > 20 else val_precision_nodes_epochs)])
         print('Validation recall by epoch:', [float('{:.6f}'.format(val_recall)) for val_recall in (val_recall_nodes_epochs[-20:] if len(val_recall_nodes_epochs) > 20 else val_recall_nodes_epochs)])
         print('Validation CSI by epoch:', [float('{:.6f}'.format(val_csi)) for val_csi in (val_csi_nodes_epochs[-20:] if len(val_csi_nodes_epochs) > 20 else val_csi_nodes_epochs)])
+        print('Validation SEDI by epoch:', [float('{:.6f}'.format(val_sedi)) for val_sedi in (val_sedi_nodes_epochs[-20:] if len(val_sedi_nodes_epochs) > 20 else val_sedi_nodes_epochs)])
         #print('Persistence MSE:', ((test_node_feats_fc[:,1:] - test_node_feats_fc[:,:-1])**2).mean())            
 
         # Current time
@@ -337,6 +343,7 @@ if lead_time > 1:
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valprecisions' + '.npy', np.array(val_precision_nodes_epochs))
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valrecalls' + '.npy', np.array(val_recall_nodes_epochs))
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valcsis' + '.npy', np.array(val_csi_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valsedis' + '.npy', np.array(val_sedi_nodes_epochs))
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_preds' + '.npy', pred_node_feats) # Predicted node features at the last epoch
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_testobs' + '.npy', test_node_feats_fc)
     
@@ -410,6 +417,7 @@ elif lead_time == 1:
     val_precision_nodes_epochs = []
     val_recall_nodes_epochs = []
     val_csi_nodes_epochs = []
+    val_sedi_nodes_epochs = []
     # Early stopping starting counter
     counter = 0
 
@@ -425,12 +433,13 @@ elif lead_time == 1:
             optimizer.step()
         loss_epochs.append(loss.item())
     
-        # Compute the MSE, precision, recall, and critical success index (CSI) on the validation set.
+        # Compute the MSE, precision, recall, critical success index (CSI), and symmetric extremal dependence index (SEDI) on the validation set.
         with torch.no_grad():
             val_mse_nodes = 0
             val_precision_nodes = 0
             val_recall_nodes = 0
             val_csi_nodes = 0
+            val_sedi_nodes = 0
             pred_node_feat_list = []
             
             for data in val_graph_list:
@@ -460,18 +469,22 @@ elif lead_time == 1:
             # CSI
             val_csi_nodes = np.nanmean([calculate_csi(pred_node_feats[i], test_node_feats[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
             val_csi_nodes_epochs.append(val_csi_nodes.item())
+            # SEDI
+            val_sedi_nodes = np.nanmean([calculate_sedi(pred_node_feats[i], test_node_feats[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
+            val_sedi_nodes_epochs.append(val_sedi_nodes.item())
     
         print('----------')
     
         # Print the current epoch and validation MSE.
         print('Epoch [{}/{}], Loss: {:.6f}, Validation MSE (calculated by column / graph): {:.6f}'.format(epoch + 1, num_epochs, loss.item(), val_mse_nodes))
         print('MSEs by node:', gnn_mse)
-        print('Validation MSE, precision, recall, and CSI (calculated by row / time series at nodes): {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(np.mean(gnn_mse), val_precision_nodes, val_recall_nodes, val_csi_nodes))
+        print('Validation MSE, precision, recall, CSI, and SEDI (calculated by row / time series at nodes): {:.6f}, {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(np.mean(gnn_mse), val_precision_nodes, val_recall_nodes, val_csi_nodes, val_sedi_nodes))
         print('Loss by epoch:', [float('{:.6f}'.format(loss)) for loss in (loss_epochs[-20:] if len(loss_epochs) > 20 else loss_epochs)]) # Print the last 20 elements if the list is too long.
         print('Validation MSE by epoch:', [float('{:.6f}'.format(val_mse)) for val_mse in (val_mse_nodes_epochs[-20:] if len(val_mse_nodes_epochs) > 20 else val_mse_nodes_epochs)]) # Same as above.
         print('Validation precision by epoch:', [float('{:.6f}'.format(val_precision)) for val_precision in (val_precision_nodes_epochs[-20:] if len(val_precision_nodes_epochs) > 20 else val_precision_nodes_epochs)])
         print('Validation recall by epoch:', [float('{:.6f}'.format(val_recall)) for val_recall in (val_recall_nodes_epochs[-20:] if len(val_recall_nodes_epochs) > 20 else val_recall_nodes_epochs)])
         print('Validation CSI by epoch:', [float('{:.6f}'.format(val_csi)) for val_csi in (val_csi_nodes_epochs[-20:] if len(val_csi_nodes_epochs) > 20 else val_csi_nodes_epochs)])
+        print('Validation SEDI by epoch:', [float('{:.6f}'.format(val_sedi)) for val_sedi in (val_sedi_nodes_epochs[-20:] if len(val_sedi_nodes_epochs) > 20 else val_sedi_nodes_epochs)])
         print('Persistence MSE:', ((test_node_feats[:,1:] - test_node_feats[:,:-1])**2).mean())
     
         # Update the best model weights if the current validation MSE is lower than the previous minimum.
@@ -504,6 +517,7 @@ elif lead_time == 1:
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valprecisions' + '.npy', np.array(val_precision_nodes_epochs))
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valrecalls' + '.npy', np.array(val_recall_nodes_epochs))
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valcsis' + '.npy', np.array(val_csi_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valsedis' + '.npy', np.array(val_sedi_nodes_epochs))
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_preds' + '.npy', best_pred_node_feats)
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_testobs' + '.npy', test_node_feats)
     
