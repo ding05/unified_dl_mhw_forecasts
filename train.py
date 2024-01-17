@@ -191,9 +191,9 @@ if lead_time > 1:
             for data in train_graph_list_fc:
                 optimizer_forecaster.zero_grad()
                 output = forecaster([data])
-                loss = criterion(output.squeeze(), data.y.squeeze())
+                #loss = criterion(output.squeeze(), data.y.squeeze())
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
-                #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+                loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss.backward()
                 optimizer_forecaster.step()
                 
@@ -219,9 +219,9 @@ if lead_time > 1:
             for data in train_graph_list_ipt:
                 optimizers_interpolator[i].zero_grad()
                 output = interpolators[i]([data])
-                loss_ipt = criterion(output.squeeze(), data.y[:, i - 1].squeeze())
-                #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
-                #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+                #loss_ipt = criterion(output.squeeze(), data.y[:, i - 1].squeeze())
+                #loss_ipt = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
+                loss_ipt = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss_ipt.backward()
                 optimizers_interpolator[i].step()
                 
@@ -337,15 +337,15 @@ if lead_time > 1:
         print('----------')
 
     # Save the results.
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_losses' + '.npy', np.array(loss_epochs))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_losses_fc' + '.npy', np.array(loss_epochs_fc))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valmses' + '.npy', np.array(val_mse_nodes_epochs))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valprecisions' + '.npy', np.array(val_precision_nodes_epochs))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valrecalls' + '.npy', np.array(val_recall_nodes_epochs))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valcsis' + '.npy', np.array(val_csi_nodes_epochs))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valsedis' + '.npy', np.array(val_sedi_nodes_epochs))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_preds' + '.npy', pred_node_feats) # Predicted node features at the last epoch
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_testobs' + '.npy', test_node_feats_fc)
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_losses' + '.npy', np.array(loss_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_losses_fc' + '.npy', np.array(loss_epochs_fc))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valmses' + '.npy', np.array(val_mse_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valprecisions' + '.npy', np.array(val_precision_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valrecalls' + '.npy', np.array(val_recall_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valcsis' + '.npy', np.array(val_csi_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valsedis' + '.npy', np.array(val_sedi_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_preds' + '.npy', pred_node_feats) # Predicted node features at the last epoch
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_testobs' + '.npy', test_node_feats_fc)
     
     print('Save the results in NPY files.')
     print('----------')
@@ -426,9 +426,9 @@ elif lead_time == 1:
         for data in train_graph_list:
             optimizer.zero_grad()
             output = model([data])
-            loss = criterion(output.squeeze(), data.y.squeeze())
+            #loss = criterion(output.squeeze(), data.y.squeeze())
             #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
-            #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+            loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
             loss.backward()
             optimizer.step()
         loss_epochs.append(loss.item())
@@ -512,14 +512,14 @@ elif lead_time == 1:
     print('----------')
     
     # Save the results.
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_losses' + '.npy', np.array(loss_epochs))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valmses' + '.npy', np.array(val_mse_nodes_epochs))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valprecisions' + '.npy', np.array(val_precision_nodes_epochs))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valrecalls' + '.npy', np.array(val_recall_nodes_epochs))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valcsis' + '.npy', np.array(val_csi_nodes_epochs))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_valsedis' + '.npy', np.array(val_sedi_nodes_epochs))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_preds' + '.npy', best_pred_node_feats)
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop) +  '_testobs' + '.npy', test_node_feats)
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_losses' + '.npy', np.array(loss_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valmses' + '.npy', np.array(val_mse_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valprecisions' + '.npy', np.array(val_precision_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valrecalls' + '.npy', np.array(val_recall_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valcsis' + '.npy', np.array(val_csi_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valsedis' + '.npy', np.array(val_sedi_nodes_epochs))
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_preds' + '.npy', best_pred_node_feats)
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_testobs' + '.npy', test_node_feats)
     
     print('Save the results in NPY files.')
     print('----------')
@@ -530,7 +530,7 @@ elif lead_time == 1:
                 'model_state_dict': best_model_weights,
                 'optimizer_state_dict': best_optimizer_state,
                 'loss': best_loss
-                }, models_path + model_class + '_' + adj_filename[8:-4] + '_' + str(stop))
+                }, models_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop))
     
     print('Save the checkpoint in a TAR file.')
     print('----------')
