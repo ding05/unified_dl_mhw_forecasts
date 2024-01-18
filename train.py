@@ -23,13 +23,13 @@ node_feat_filename = 'node_feats_ssta_1980_2010.npy'
 adj_filename = 'adj_mat_25_12.npy'
 
 window_size = 12
-lead_time = 2
+lead_time = 6
 learning_rate = 0.01 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for SSTs
 #learning_rate = 0.01 # For the GraphSAGE-LSTM
 weight_decay = 0.0001 # 0.0001 for RMSProp
 momentum = 0.9
 l1_ratio = 1
-num_epochs = 2 #1000, 400, 200
+num_epochs = 50 #1000, 400, 200
 # Early stopping, if the validation MSE has not improved for "patience" epochs, stop training.
 patience = num_epochs #100, 40, 20
 min_val_mse = np.inf
@@ -143,8 +143,8 @@ if lead_time > 1:
     forecaster, model_class_fc = MultiGraphSage(in_channels=graph_list_fc[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list_fc), aggr='mean'), 'SAGE_FC'
     
     # Define the loss function.
-    criterion = nn.MSELoss()
-    #criterion = BMCLoss(0.02)
+    #criterion = nn.MSELoss()
+    criterion = BMCLoss(0.02)
     criterion_test = nn.MSELoss()
     
     # Define the optimizer.
@@ -191,10 +191,10 @@ if lead_time > 1:
             for data in train_graph_list_fc:
                 optimizer_forecaster.zero_grad()
                 output = forecaster([data])
-                loss = criterion(output.squeeze(), data.y.squeeze())
+                #loss = criterion(output.squeeze(), data.y.squeeze())
                 #loss, noise_var = criterion(output.squeeze(), data.y.squeeze()) # For BMSE
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
-                #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+                loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss.backward()
                 optimizer_forecaster.step()
                 
@@ -220,8 +220,8 @@ if lead_time > 1:
             for data in train_graph_list_ipt:
                 optimizers_interpolator[i].zero_grad()
                 output = interpolators[i]([data])
-                loss_ipt = criterion(output.squeeze(), data.y[:, i - 1].squeeze())
-                #loss_ipt, noise_var_ipt = criterion(output.squeeze(), data.y[:, i - 1].squeeze()) # For BMSE
+                #loss_ipt = criterion(output.squeeze(), data.y[:, i - 1].squeeze())
+                loss_ipt, noise_var_ipt = criterion(output.squeeze(), data.y[:, i - 1].squeeze()) # For BMSE
                 #loss_ipt = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
                 #loss_ipt = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss_ipt.backward()
