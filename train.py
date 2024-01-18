@@ -351,13 +351,10 @@ if lead_time > 1:
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valsedis' + '.npy', np.array(val_sedi_nodes_epochs))
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_preds' + '.npy', pred_node_feats) # Predicted node features at the last epoch
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_testobs' + '.npy', test_node_feats_fc)
-    
+
     print('Save the results in NPY files.')
     print('----------')
-    
-    best_model_weights = model.state_dict()
-    best_optimizer_state = optimizer.state_dict()
-    
+
     # Save the models.
     # Save Interpolator(s).
     for i in range(1, lead_time):
