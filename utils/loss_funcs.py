@@ -34,9 +34,26 @@ def cm_weighted_mse(preds, targets, threshold, alpha=1.5, beta=0.5, weight=1.0):
     # Ensure the threshold tensor has the same dimensions as targets.
     threshold = threshold.view_as(targets)
     # Calculate the weights using a tensor mask for conditional computation.
+    # The mask now compares each element in the targets to the corresponding threshold.
     mask = targets > threshold
     weights = ((weight * torch.abs(targets) ** alpha) * mask + (torch.abs(targets) ** alpha) * (~mask)) ** beta
+    # Calculate the unweighted loss (squared error) element-wise.
     unweighted_loss = (preds - targets) ** 2
-    loss = unweighted_loss * weights
-    loss = loss.mean()
+    # Calculate the weighted loss element-wise and then take the mean.
+    loss = (unweighted_loss * weights).mean()
+    return loss
+
+def cm_weighted_mse_2d(preds, targets, threshold, alpha=1.5, beta=0.5, weight=1.0):
+    # Ensure the threshold tensor is broadcasted correctly to match the dimensions of targets.
+    # Use unsqueeze.() to add a singleton dimension so that broadcasting works as intended.
+    threshold = threshold.unsqueeze(1)
+    # Calculate the weights using a tensor mask for conditional computation.
+    # The mask now compares each element in the targets to the corresponding threshold.
+    mask = targets > threshold
+    weights = ((weight * torch.abs(targets) ** alpha) * mask + 
+               (torch.abs(targets) ** alpha) * (~mask)) ** beta
+    # Calculate the unweighted loss (squared error) element-wise.
+    unweighted_loss = (preds - targets) ** 2
+    # Calculate the weighted loss element-wise and then take the mean.
+    loss = (unweighted_loss * weights).mean()
     return loss
