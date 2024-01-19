@@ -194,8 +194,7 @@ if lead_time > 1:
                 #loss = criterion(output.squeeze(), data.y.squeeze())
                 #loss, noise_var = criterion(output.squeeze(), data.y.squeeze()) # For BMSE
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
-                #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
-                loss = cm_weighted_mse_2D(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+                loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss.backward()
                 optimizer_forecaster.step()
                 
@@ -224,7 +223,8 @@ if lead_time > 1:
                 #loss_ipt = criterion(output.squeeze(), data.y[:, i - 1].squeeze())
                 #loss_ipt, noise_var_ipt = criterion(output.squeeze(), data.y[:, i - 1].squeeze()) # For BMSE
                 #loss_ipt = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
-                loss_ipt = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+                #loss_ipt = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+                loss_ipt = cm_weighted_mse_2d(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
                 loss_ipt.backward()
                 optimizers_interpolator[i].step()
                 
