@@ -36,7 +36,7 @@ min_val_mse = np.inf
 # For the GraphSAGE-LSTM
 sequence_length = 12
 # For the GraphSAGE-Diffusion
-dropout_rate = 0.1
+dropout_rate = 0.3
 
 # Load the data.
 
