@@ -31,12 +31,13 @@ momentum = 0.9
 l1_ratio = 1
 num_epochs = 50 #1000, 400, 200
 # Early stopping, if the validation MSE has not improved for "patience" epochs, stop training.
-patience = num_epochs #100, 40, 20
+patience = 20 #100, 40, 20
 min_val_mse = np.inf
+max_val_sedi = -np.inf
 # For the GraphSAGE-LSTM
 sequence_length = 12
 # For the GraphSAGE-Diffusion
-dropout_rate = 0.3
+dropout_rate = 0.1
 
 # Load the data.
 
@@ -241,7 +242,19 @@ if lead_time > 1:
                 for node_i in range(x.shape[0]):
                     x[node_i, window_size + i - 1] = pred_node_feat_list_ipt[g][node_i].clone()
                 train_graph_list_fc[g].x = x
-        
+            
+        # Refine Forecaster for the last time for this epoch.
+        print('Rrefine Forecaster.')
+        for data in train_graph_list_fc:
+            optimizer_forecaster.zero_grad()
+            output = forecaster([data])
+            #loss = criterion(output.squeeze(), data.y.squeeze())
+            #loss, noise_var = criterion(output.squeeze(), data.y.squeeze()) # For BMSE
+            #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
+            loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+            loss.backward()
+            optimizer_forecaster.step()
+            
         loss_epochs.append(loss.item()) # Save only the last loss value of Forecaster per epoch.
         
         # Evaluate the model.
@@ -339,6 +352,27 @@ if lead_time > 1:
         print(f'Time spent: {cur - start} seconds')
         print('----------')
 
+        # Update the best model weights if the current validation SEDI is higher than the previous maximum.
+        if val_sedi_nodes.item() > max_val_sedi:
+            min_val_sedi = val_sedi_nodes.item()
+            best_epoch = epoch
+            best_interpolators_weights = {}
+            best_optimizers_states_interpolators = {}
+            for i in range(1, lead_time):
+                best_interpolators_weights[i] = interpolators[i].state_dict()
+                best_optimizers_states_interpolators[i] = optimizers_interpolator[i].state_dict()
+            best_forecaster_weights = forecaster.state_dict()
+            best_optimizer_state_forecaster = optimizer_forecaster.state_dict()
+            best_loss = loss
+            best_pred_node_feats = pred_node_feats
+            counter = 0
+        else:
+            counter += 1
+        # If the validation MSE has not improved for "patience" epochs, stop training.
+        if counter >= patience:
+            print(f'Early stopping at Epoch {epoch} with best validation SEDI: {min_sedi_mse} at Epoch {best_epoch}.')
+            break
+
     # End time
     stop = time.time()
 
@@ -361,16 +395,16 @@ if lead_time > 1:
     for i in range(1, lead_time):
         torch.save({
             'epoch': num_epochs,
-            'model_state_dict': interpolators[i].state_dict(),
-            'optimizer_state_dict': optimizers_interpolator[i].state_dict(),
+            'model_state_dict': best_interpolators_weights[i],
+            'optimizer_state_dict': best_optimizers_states_interpolators[i],
             #'loss': best_loss
             }, models_path + model_classes_ipt[i] + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop))
     # Save Forecaster.
     torch.save({
         'epoch': num_epochs,
-        'model_state_dict': forecaster.state_dict(),
-        'optimizer_state_dict': optimizer_forecaster.state_dict(),
-        #'loss': best_loss
+        'model_state_dict': best_forecaster_weights,
+        'optimizer_state_dict': best_optimizer_state_forecaster,
+        'loss': best_loss
         }, models_path + model_class_fc + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop))
     
     print('Save the checkpoints in TAR files.')
