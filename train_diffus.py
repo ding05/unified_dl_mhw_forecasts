@@ -384,7 +384,7 @@ if lead_time > 1:
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valrecalls' + '.npy', np.array(val_recall_nodes_epochs))
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valcsis' + '.npy', np.array(val_csi_nodes_epochs))
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_valsedis' + '.npy', np.array(val_sedi_nodes_epochs))
-    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_preds' + '.npy', pred_node_feats) # Predicted node features at the last epoch
+    save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_preds' + '.npy', best_pred_node_feats)
     save(out_path + model_class + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop) +  '_testobs' + '.npy', test_node_feats_fc)
 
     print('Save the results in NPY files.')
