@@ -23,8 +23,8 @@ node_feat_filename = 'node_feats_ssta_1980_2010.npy'
 adj_filename = 'adj_mat_25_12.npy'
 
 window_size = 12
-lead_time = 6
-loss_func = 'MSE' #'BMSE', 'WMSE'
+lead_time = 1
+loss_func = 'MSE' #'MSE', 'BMSE', 'WMSE'
 learning_rate = 0.01 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for SSTs
 #learning_rate = 0.01 # For the GraphSAGE-LSTM
 weight_decay = 0.0001 # 0.0001 for RMSProp
@@ -203,7 +203,7 @@ for epoch in range(num_epochs):
 
     # Update the best model weights if the current validation SEDI is higher than the previous maximum.
     if val_sedi_nodes.item() > max_val_sedi:
-        min_val_sedi = val_sedi_nodes.item()
+        max_val_sedi = val_sedi_nodes.item()
         best_epoch = epoch
         best_model_weights = model.state_dict()
         best_optimizer_state = optimizer.state_dict()

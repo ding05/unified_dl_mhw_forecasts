@@ -23,8 +23,8 @@ node_feat_filename = 'node_feats_ssta_1980_2010.npy'
 adj_filename = 'adj_mat_25.npy'
 
 window_size = 12
-lead_time = 6
-loss_func = 'MSE' #'BMSE', 'WMSE'
+lead_time = 1
+loss_func = 'MSE' #'MSE', 'BMSE', 'WMSE'
 learning_rate = 0.01 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for SSTs
 #learning_rate = 0.01 # For the GraphSAGE-LSTM
 weight_decay = 0.0001 # 0.0001 for RMSProp
@@ -368,7 +368,7 @@ if lead_time > 1:
 
         # Update the best model weights if the current validation SEDI is higher than the previous maximum.
         if val_sedi_nodes.item() > max_val_sedi:
-            min_val_sedi = val_sedi_nodes.item()
+            max_val_sedi = val_sedi_nodes.item()
             best_epoch = epoch
             best_interpolators_weights = {}
             best_optimizers_states_interpolators = {}
@@ -470,8 +470,12 @@ elif lead_time == 1:
     model, model_class = MultiGraphSage(in_channels=graph_list[0].x[0].shape[0], hid_channels=15, out_channels=1, num_graphs=len(train_graph_list), aggr='mean'), 'SAGE'
     
     # Define the loss function.
-    criterion = nn.MSELoss()
-    #criterion = BMCLoss(0.1)
+    if loss_func == 'MSE' or 'WMSE':
+        criterion = nn.MSELoss()
+    elif loss_func == 'BMSE':
+        criterion = BMCLoss(0.02)
+    else:
+        print('Loss function error')
     criterion_test = nn.MSELoss()
     
     # Define the optimizer.
@@ -500,9 +504,13 @@ elif lead_time == 1:
         for data in train_graph_list:
             optimizer.zero_grad()
             output = model([data])
-            #loss = criterion(output.squeeze(), data.y.squeeze())
-            #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
-            loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+            if loss_func == 'MSE' or 'BMSE':
+                loss = criterion(output.squeeze(), data.y.squeeze())
+            elif: loss_func = 'WMSE':
+                #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
+                loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
+            else:
+                print('Loss function error')
             loss.backward()
             optimizer.step()
         loss_epochs.append(loss.item())
@@ -562,8 +570,8 @@ elif lead_time == 1:
         print('Persistence MSE:', ((test_node_feats[:,1:] - test_node_feats[:,:-1])**2).mean())
     
         # Update the best model weights if the current validation MSE is lower than the previous minimum.
-        if val_mse_nodes.item() < min_val_mse:
-            min_val_mse = val_mse_nodes.item()
+        if val_sedi_nodes.item() > max_val_sedi:
+            max_val_sedi = val_sedi_nodes.item()
             best_epoch = epoch
             best_model_weights = model.state_dict()
             best_optimizer_state = optimizer.state_dict()
