@@ -20,7 +20,7 @@ models_path = 'configs/'
 out_path = 'out/'
 
 node_feat_filename = 'node_feats_ssta_1980_2010.npy'
-adj_filename = 'adj_mat_25_12.npy'
+adj_filename = 'adj_mat_25.npy'
 
 window_size = 12
 lead_time = 6
