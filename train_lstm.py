@@ -27,7 +27,7 @@ lead_time = 6
 learning_rate = 0.01 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for SSTs
 #learning_rate = 0.01 # For the GraphSAGE-LSTM
 weight_decay = 0.0001 # 0.0001 for RMSProp
-momentum = 0.9
+#momentum = 0.9
 l1_ratio = 1
 num_epochs = 200 #1000, 400, 200
 # Early stopping, if the validation MSE has not improved for "patience" epochs, stop training.
