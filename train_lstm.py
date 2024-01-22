@@ -141,7 +141,7 @@ for epoch in range(num_epochs):
         output = model([data_sequence])
         if loss_func == 'MSE' or 'BMSE':
             loss = criterion(output.squeeze(), data.y.squeeze())
-        elif: loss_func = 'WMSE':
+        elif loss_func == 'WMSE':
             #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
             loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
         else:
@@ -217,7 +217,7 @@ for epoch in range(num_epochs):
         counter += 1
     # If the validation MSE has not improved for "patience" epochs, stop training.
     if counter >= patience:
-        print(f'Early stopping at Epoch {epoch} with best validation MSE: {min_val_mse} at Epoch {best_epoch}.')
+        print(f'Early stopping at Epoch {epoch} with best validation SEDI: {max_val_sedi} at Epoch {best_epoch}.')
         break
 
 print('----------')
