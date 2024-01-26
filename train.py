@@ -20,11 +20,11 @@ models_path = 'configs/'
 out_path = 'out/'
 
 node_feat_filename = 'node_feats_ssta_1980_2010.npy'
-adj_filename = 'adj_mat_0.8.npy'
+adj_filename = 'adj_mat_25.npy'
 
 window_size = 12
 lead_time = 1
-loss_func = 'MSE' #'MSE', 'BMSE', 'WMSE'
+loss_func = 'WMSE' #'MSE', 'BMSE', 'WMSE'
 learning_rate = 0.01 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for SSTs
 #learning_rate = 0.01 # For the GraphSAGE-LSTM
 weight_decay = 0.0001 # 0.0001 for RMSProp
