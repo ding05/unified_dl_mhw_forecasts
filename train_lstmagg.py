@@ -30,9 +30,9 @@ learning_rate = 0.01 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for S
 weight_decay = 0.0001 # 0.0001 for RMSProp
 #momentum = 0.9
 l1_ratio = 1
-num_epochs = 200 #1000, 400, 200
+num_epochs = 50 #1000, 400, 200
 # Early stopping, if the validation MSE has not improved for "patience" epochs, stop training.
-patience = 40 #100, 40, 20
+patience = 30 #100, 40, 20
 min_val_mse = np.inf
 max_val_sedi = -np.inf
 

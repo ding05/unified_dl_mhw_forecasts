@@ -23,7 +23,7 @@ node_feat_filename = 'node_feats_ssta_1980_2010.npy'
 adj_filename = 'adj_mat_25.npy'
 
 window_size = 12
-lead_time = 3
+lead_time = 6
 loss_func = 'WMSE' #'MSE', 'BMSE', 'WMSE'
 learning_rate = 0.01 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for SSTs
 #learning_rate = 0.01 # For the GraphSAGE-LSTM
@@ -32,7 +32,7 @@ weight_decay = 0.0001 # 0.0001 for RMSProp
 l1_ratio = 1
 num_epochs = 50 #1000, 400, 200
 # Early stopping, if the validation MSE has not improved for "patience" epochs, stop training.
-patience = 20 #100, 40, 20
+patience = 30 #100, 40, 20
 min_val_mse = np.inf
 max_val_sedi = -np.inf
 # For the GraphSAGE-Diffusion
