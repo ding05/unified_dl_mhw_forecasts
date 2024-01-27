@@ -567,16 +567,20 @@ elif lead_time == 1:
         print('Persistence MSE:', ((test_node_feats[:,1:] - test_node_feats[:,:-1])**2).mean())
     
         # Update the best model weights if the current validation MSE is lower than the previous minimum.
-        if val_sedi_nodes.item() > max_val_sedi:
-            max_val_sedi = val_sedi_nodes.item()
-            best_epoch = epoch
-            best_model_weights = model.state_dict()
-            best_optimizer_state = optimizer.state_dict()
-            best_loss = loss
-            best_pred_node_feats = pred_node_feats
-            counter = 0
+        # Starting at the 6th epoch.
+        if epoch >= 5:
+            if val_sedi_nodes.item() > max_val_sedi:
+                max_val_sedi = val_sedi_nodes.item()
+                best_epoch = epoch
+                best_model_weights = model.state_dict()
+                best_optimizer_state = optimizer.state_dict()
+                best_loss = loss
+                best_pred_node_feats = pred_node_feats
+                counter = 0
+            else:
+                counter += 1
         else:
-            counter += 1
+            pass
         # If the validation MSE has not improved for "patience" epochs, stop training.
         if counter >= patience:
             print(f'Early stopping at Epoch {epoch} with best validation SEDI: {max_val_sedi} at Epoch {best_epoch}.')

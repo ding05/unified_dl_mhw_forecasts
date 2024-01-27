@@ -163,7 +163,9 @@ for epoch in range(num_epochs):
             data_sequence = val_graph_list[i:i+sequence_length]
             target_data = val_graph_list[i+sequence_length]
             output = model([data_sequence])
-            val_mse = criterion_test(output, target_data.y.squeeze())
+            val_mse = criterion_test(output, torch.tensor(target_data.y).squeeze())
+            print('Val predictions:', [round(i, 4) for i in output.squeeze().tolist()[::300]])
+            print('Val observations:', [round(i, 4) for i in torch.tensor(target_data.y).squeeze().tolist()[::300]])
             val_mse_nodes += val_mse
             
             # The model output graph by graph, but we are interested in time series at node by node.
