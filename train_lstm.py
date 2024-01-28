@@ -183,16 +183,16 @@ for epoch in range(num_epochs):
         gnn_mse = np.mean((pred_node_feats_padded - test_node_feats) ** 2, axis=1)
         
         # Precision
-        val_precision_nodes = np.nanmean([calculate_precision(pred_node_feats[i], test_node_feats[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
+        val_precision_nodes = np.nanmean([calculate_precision(pred_node_feats_padded[i], test_node_feats[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
         val_precision_nodes_epochs.append(val_precision_nodes.item())
         # Recall
-        val_recall_nodes = np.nanmean([calculate_recall(pred_node_feats[i], test_node_feats[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
+        val_recall_nodes = np.nanmean([calculate_recall(pred_node_feats_padded[i], test_node_feats[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
         val_recall_nodes_epochs.append(val_recall_nodes.item())
         # CSI
-        val_csi_nodes = np.nanmean([calculate_csi(pred_node_feats[i], test_node_feats[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
+        val_csi_nodes = np.nanmean([calculate_csi(pred_node_feats_padded[i], test_node_feats[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
         val_csi_nodes_epochs.append(val_csi_nodes.item())
         # SEDI
-        val_sedi_nodes = np.nanmean([calculate_sedi(pred_node_feats[i], test_node_feats[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
+        val_sedi_nodes = np.nanmean([calculate_sedi(pred_node_feats_padded[i], test_node_feats[i], node_feats_normalized_90[i]) for i in range(node_feats_normalized_90.shape[0])])
         val_sedi_nodes_epochs.append(val_sedi_nodes.item())
 
     print('----------')
