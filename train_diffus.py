@@ -409,14 +409,14 @@ if lead_time > 1:
             'model_state_dict': best_interpolators_weights[i],
             'optimizer_state_dict': best_optimizers_states_interpolators[i],
             #'loss': best_loss
-            }, models_path + model_class + '_' + loss_funces_ipt[i] + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop))
+            }, models_path + model_class + '_' + loss_func + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop))
     # Save Forecaster.
     torch.save({
         'epoch': num_epochs,
         'model_state_dict': best_forecaster_weights,
         'optimizer_state_dict': best_optimizer_state_forecaster,
         'loss': best_loss
-        }, models_path + model_class + '_' + loss_func_fc + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop))
+        }, models_path + model_class + '_' + loss_func + '_' + adj_filename[8:-4] + '_' + str(lead_time) + '_' + str(stop))
     
     print('Save the checkpoints in TAR files.')
     print('----------')
