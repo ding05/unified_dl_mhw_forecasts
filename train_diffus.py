@@ -503,7 +503,7 @@ elif lead_time == 1:
             output = model([data])
             if loss_func == 'MSE' or 'BMSE':
                 loss = criterion(output.squeeze(), data.y.squeeze())
-            elif: loss_func = 'WMSE':
+            elif loss_func == 'WMSE':
                 #loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor)
                 loss = cm_weighted_mse(output.squeeze(), data.y.squeeze(), threshold=threshold_tensor, alpha=2.0, beta=1.0, weight=2.0)
             else:
