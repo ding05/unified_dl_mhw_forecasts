@@ -215,7 +215,7 @@ for epoch in range(num_epochs):
             counter += 1
     else:
         pass
-    # If the validation MSE has not improved for "patience" epochs, stop training.
+    # If the validation SEDI has not improved for "patience" epochs, stop training.
     if counter >= patience:
         print(f'Early stopping at Epoch {epoch} with best validation SEDI: {max_val_sedi} at Epoch {best_epoch}.')
         break

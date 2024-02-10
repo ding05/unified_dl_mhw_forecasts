@@ -379,7 +379,7 @@ if lead_time > 1:
             counter = 0
         else:
             counter += 1
-        # If the validation MSE has not improved for "patience" epochs, stop training.
+        # If the validation SEDI has not improved for "patience" epochs, stop training.
         if counter >= patience:
             print(f'Early stopping at Epoch {epoch} with best validation SEDI: {max_val_sedi} at Epoch {best_epoch}.')
             break

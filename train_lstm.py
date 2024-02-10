@@ -23,7 +23,7 @@ node_feat_filename = 'node_feats_ssta_1980_2010.npy'
 adj_filename = 'adj_mat_25.npy'
 
 window_size = 12
-lead_time = 6
+lead_time = 3
 loss_func = 'WMSE' #'MSE', 'BMSE', 'WMSE'
 learning_rate = 0.01 # 0.001 for SSTs with MSE # 0.0005, 0.001 for RMSProp for SSTs
 #learning_rate = 0.01 # For the GraphSAGE-LSTM
@@ -224,7 +224,7 @@ for epoch in range(num_epochs):
             counter += 1
     else:
         pass
-    # If the validation MSE has not improved for "patience" epochs, stop training.
+    # If the validation SEDI has not improved for "patience" epochs, stop training.
     if counter >= patience:
         print(f'Early stopping at Epoch {epoch} with best validation SEDI: {max_val_sedi} at Epoch {best_epoch}.')
         break
